@@ -1,0 +1,29 @@
+.FlexColStartCentered {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.FlexRowCentered {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.ListItem {
+    height: 50px;
+    width: 90%;
+    cursor: pointer;
+}
+
+.SelectedListItem {
+    border-right: 3px solid lightseagreen;
+    color: #f9f9f9;
+}
+
+.UnselectedListItem {
+    /* border-right: 3px solid lightgrey; */
+    color: #82858a;
+}

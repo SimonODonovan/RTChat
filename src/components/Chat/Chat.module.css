@@ -1,0 +1,82 @@
+.ChatWrapper {
+  height: 100%;
+}
+
+.AppBar {
+  height: 64px;
+}
+
+.ChatComponents {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+}
+
+.ChannelChat {
+  width: 100%;
+  height: 100%;
+  background-color: #36393f;
+}
+
+.NavWrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+.ServerChats {
+  height: 100%;
+  width: 85%;
+}
+
+.Hidden {
+  display: none;
+}
+
+@keyframes slide-in {
+  100% { transform: translateX(0%); }
+}
+
+@-webkit-keyframes slide-in {
+  100% { -webkit-transform: translateX(0%); }
+}
+  
+@keyframes slide-out {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+@-webkit-keyframes slide-out {
+  0% { -webkit-transform: translateX(0%); }
+  100% { -webkit-transform: translateX(-100%); }
+}
+
+.SlideIn {
+  animation: slide-in 0.5s forwards;
+  -webkit-animation: slide-in 0.5s forwards;
+}
+
+.SlideOut {
+  animation: slide-out 0.5s forwards;
+  -webkit-animation: slide-out 0.5s forwards;
+}
+
+@media only screen and (max-width: 700px) {
+  .ChatWrapper {
+    display: flex;
+    flex-direction: column;
+  }
+  .ChatComponents {
+    height: calc(100% - 64px);
+  }
+  .NavWrapper {
+    height: calc(100% - 64px);
+    position: absolute;
+    z-index: 1;
+    transform: translateX(-100%);
+  }
+  .ServerChats {
+    width: 100vh;
+  }
+}
