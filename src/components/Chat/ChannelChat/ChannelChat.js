@@ -5,13 +5,19 @@ import css from './ChannelChat.module.css';
 import useAuth from '../../../hooks/auth/useAuth';
 import firebase from 'firebase/app';
 import 'firebase/database';
-import Message from './Message/Message';
 import useFirebaseDataListener from '../../../hooks/chat/useFirebaseDataListener';
-import { InputAdornment, IconButton, TextField, Divider, Fab, Zoom, Tooltip, Grow, Snackbar } from '@material-ui/core';
+
+import Message from './Message/Message';
+
+import 'emoji-mart/css/emoji-mart.css'
+import { Picker } from 'emoji-mart'
+
+import { InputAdornment, IconButton, TextField, Divider, Fab, Zoom, Tooltip, Grow, Snackbar, CircularProgress } from '@material-ui/core';
 import SendOutlinedIcon from '@material-ui/icons/SendOutlined';
 import ExpandMoreOutlinedIcon from '@material-ui/icons/ExpandMoreOutlined';
 import AttachFileIcon from '@material-ui/icons/AttachFile';
 import CancelOutlinedIcon from '@material-ui/icons/CancelOutlined';
+import SentimentVerySatisfiedOutlinedIcon from '@material-ui/icons/SentimentVerySatisfiedOutlined';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -25,19 +31,61 @@ const ChannelChat = props => {
     const [newFileUpload, setNewFileUpload] = useState(false);
     const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
     const [chatRows, setChatRows] = useState(1);
-    const [snackbarMessage, setSnackbarMessage] = useState("")
-    const [snackbarOpen, setSnackbarOpen] = useState(false)
+    const [messageSending, setMessageSending] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState("");
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [emojiTarget, setEmojiTarget] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [fetchingMessages, setFetchingMessages] = useState(false);
+    const [messagesExhausted, setMessagesExhausted] = useState(false);
 
     const messagesEndRef = useRef(null);
+    const messageListRef = useRef(null);
     const chatScrollerRef = useRef(null);
 
     const serverChannelMessagesPath = `/serverMessages/${server}/${channel}`;
     const channelMessages = useFirebaseDataListener(serverChannelMessagesPath);
 
-    const sendMessage = useCallback(() => {
-        if (!newMessageText && !newFileUpload)
+    const clearFileUpload = useCallback(() => {
+        if (messageSending)
             return
+        setNewFileName(false);
+        setNewFileUpload(false);
+    }, [messageSending]);
 
+    const openEmojiReactionMenu = useCallback((messageKey = false) => {
+        if (showEmojiPicker) {
+            setShowEmojiPicker(false);
+        } else {
+            setEmojiTarget(messageKey);
+            setShowEmojiPicker(true);
+        }
+    }, [showEmojiPicker])
+
+    const sendMessage = useCallback(() => {
+        const downscaleImage = (img, newWidth = 500, imageType = "image/jpeg", quality = 0.8) => {
+            // Create a temporary image so that we can compute the height of the downscaled image.
+            const oldWidth = img.width;
+            const oldHeight = img.height;
+            const rescale = newWidth < oldWidth;
+            const newHeight = rescale ? Math.floor(oldHeight / oldWidth * newWidth) : oldHeight
+
+            // Create a temporary canvas to draw the downscaled image on.
+            const canvas = document.createElement("canvas");
+            canvas.width = rescale ? newWidth : oldWidth;
+            canvas.height = newHeight;
+
+            // Draw the downscaled image on the canvas and return the new data URL.
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+            const newDataUrl = canvas.toDataURL(imageType, quality);
+            return newDataUrl;
+        }
+
+        if ((!newMessageText && !newFileUpload) || messageSending) {
+            return
+        }
+        setMessageSending(true);
         const uploadMessage = (filePath = false) => {
             const messageDetails = {
                 userUID: auth.user.uid,
@@ -54,25 +102,31 @@ const ChannelChat = props => {
                     setNewMessageText("");
                 }
                 clearFileUpload();
+                setMessageSending(false);
+                setChatRows(1);
             })
         }
-
         if (newFileUpload) {
             const uuid = uuidv4();
-            const storRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/${uuid}`);
-            storRef.putString(newFileUpload, 'data_url')
+            const downscaledImagedDataUrl = downscaleImage(newFileUpload.compressed);
+            const compressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/${uuid}`);
+            compressedStorRef.putString(downscaledImagedDataUrl, 'data_url') //newFileUpload
                 .then(ret => {
                     const filePath = ret.ref.fullPath;
                     uploadMessage(filePath);
+                    const uncompressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/uncompressed/${uuid}`);
+                    uncompressedStorRef.put(newFileUpload.uncompressed)
                 })
                 .catch(e => {
                     setSnackbarMessage("Could not upload file, please try again.");
                     setSnackbarOpen(true);
+                    setMessageSending(false);
                 });
         } else {
             uploadMessage();
         };
-    }, [serverChannelMessagesPath, newMessageText, newFileUpload, auth.user.uid, channel, server])
+    }, [serverChannelMessagesPath, newMessageText, newFileUpload, auth.user.uid,
+        channel, server, messageSending, setMessageSending, clearFileUpload])
 
     // Set CTRL + Enter key listener to send new messages.
     // Clean event listener on component unmount.
@@ -80,7 +134,6 @@ const ChannelChat = props => {
         const sendMessageKeyListener = (event) => {
             if (event.ctrlKey && event.key === 'Enter' && (newMessageText || newFileUpload)) {
                 sendMessage();
-                setChatRows(1);
             }
         }
         document.addEventListener('keyup', sendMessageKeyListener)
@@ -99,22 +152,35 @@ const ChannelChat = props => {
                 const messageDetails = channelMessages[key];
                 return (
                     <React.Fragment key={key}>
-                        <Message messageDetails={messageDetails} />
+                        <Message messageKey={key} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(key)} />
                         <Divider style={{ backgroundColor: "#484c52" }} className={css.Divider} />
                     </React.Fragment>
                 )
             });
             setMessageList(messages);
         }
-    }, [channelMessages])
+    }, [channelMessages, server, channel, openEmojiReactionMenu])
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
-    const toggleBottomScrollVisibility = () => {
-        const scrolled = chatScrollerRef.current.scrollTop;
-        setShowScrollToBottomButton(scrolled < 0)
+    const fetchEarlierMessages = () => {
+        if(!fetchingMessages && !messagesExhausted) {
+            setFetchingMessages(true)
+            console.log("TODO fetch earlier messages")
+            //TODO
+        }
+    }
+
+    const toggleBottomScrollVisibility = event => {
+        const scroller = chatScrollerRef.current;
+        const scrollPercentInverted = (scroller.scrollTop / (scroller.scrollHeight - scroller.clientHeight)) * 100;
+        const scrollPercent = scrollPercentInverted * -1;
+        setShowScrollToBottomButton(scrollPercent > 30);
+        if(scrollPercent > 95)
+            fetchEarlierMessages();
+
     }
 
     const updateMessageText = evt => {
@@ -125,25 +191,40 @@ const ChannelChat = props => {
     }
 
     const handleFileUploadSelected = (target) => {
+        const showImageError = (errorMessage) => {
+            setNewFileUpload(null);
+            setSnackbarMessage(errorMessage);
+            setSnackbarOpen(true);
+        }
+        const doPreliminaryValidation = imageFile => {
+            let error = false;
+            const isImage = imageFile.type.includes('image');
+            const isImageTooLarge = imageFile.size > 8388608; //8MB
+            if (!isImage) {
+                error = 'Invalid image content. Please try another image.';
+            } else if (isImageTooLarge) {
+                error = 'File too large, maximum size 8MB.';
+            }
+            return error;
+        }
         const imageFile = target.files[0];
-        const fileReader = new FileReader();
-        fileReader.onload = e => {
+        if (imageFile) {
+            const error = doPreliminaryValidation(imageFile)
+            if (error) {
+                showImageError(error);
+                return;
+            }
             const img = new Image();
             img.onload = () => {
                 setNewFileName(imageFile.name);
-                setNewFileUpload(img.src);
+                setNewFileUpload({ compressed: img, uncompressed: imageFile });
                 setSnackbarMessage("");
                 setSnackbarOpen(false);
             };
-            img.onerror = () => {
-                setNewFileUpload(null);
-                setSnackbarMessage('Invalid image content. Please try another image.');
-                setSnackbarOpen(true);
-            };
-            const fileDataUrl = e.target.result;
-            img.src = fileDataUrl;
-        };
-        fileReader.readAsDataURL(imageFile);
+            img.onerror = () => showImageError('Invalid image content. Please try another image.');
+            const fileURI = URL.createObjectURL(imageFile);
+            img.src = fileURI;
+        }
     }
 
     const closeSnackbar = (event, reason) => {
@@ -152,18 +233,31 @@ const ChannelChat = props => {
         setSnackbarOpen(false);
     }
 
-    const clearFileUpload = () => {
-        setNewFileName(false);
-        setNewFileUpload(false);
+    const handleEmojiSelect = emoji => {
+        if (!emojiTarget) {
+            setNewMessageText(prev => prev + emoji.native);
+        } else {
+            const messageReactionRef = firebase.database().ref(`serverMessages/${server}/${channel}/${emojiTarget}/reactions/${emoji.native}`);
+            const update = { [auth.user.uid]: true };
+            messageReactionRef.update(update);
+        }
+    }
+
+    const clearEmojiPicker = () => {
+        if (showEmojiPicker) {
+            setEmojiTarget(false);
+            setShowEmojiPicker(false);
+        }
     }
 
     const wrapperClasses = ["FlexColStartCentered", css.ChannelChat];
     return (
         <div className={wrapperClasses.join(' ')}>
-            <div ref={chatScrollerRef} onScroll={toggleBottomScrollVisibility} className={css.ReverseScrolling}>
-                <div className={css.MessageList}>
+            <div ref={chatScrollerRef} onScroll={toggleBottomScrollVisibility} className={css.ReverseScrolling} onClick={clearEmojiPicker}>
+                <div ref={messageListRef} className={css.MessageList}>
                     {messageList}
                     <div ref={messagesEndRef}></div>
+                    {messageSending && <CircularProgress size={50} />}
                 </div>
             </div>
 
@@ -175,6 +269,7 @@ const ChannelChat = props => {
                     multiline
                     rows={chatRows}
                     placeholder={`Message ${channel}`}
+                    disabled={messageSending}
                     value={newMessageText}
                     onChange={evt => updateMessageText(evt)}
                     InputProps={{
@@ -183,9 +278,9 @@ const ChannelChat = props => {
                             <InputAdornment>
                                 {!newFileName ?
                                     <Tooltip title="Upload an image">
-                                        <IconButton style={{ color: "#f9f9f9" }} component="label">
+                                        <IconButton style={{ color: "#f9f9f9" }} component="label" disabled={messageSending}>
                                             <AttachFileIcon />
-                                            <input type="file" accept="image/*" onChange={evt => handleFileUploadSelected(evt.target)} hidden />
+                                            <input type="file" accept="image/*;capture=camera" onChange={evt => handleFileUploadSelected(evt.target)} hidden />
                                         </IconButton>
                                     </Tooltip>
                                     :
@@ -195,6 +290,9 @@ const ChannelChat = props => {
                                         </IconButton>
                                     </Tooltip>
                                 }
+                                <IconButton style={{ color: "#f9f9f9" }} onClick={() => openEmojiReactionMenu()}>
+                                    <SentimentVerySatisfiedOutlinedIcon />
+                                </IconButton>
                             </InputAdornment>
                         ),
                         endAdornment: (
@@ -220,6 +318,7 @@ const ChannelChat = props => {
                 </Zoom>
             </div>
 
+            {showEmojiPicker && <div className={css.EmojiPickerWrapper}><Picker emoji="" title="" onSelect={handleEmojiSelect} /></div>}
             <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={closeSnackbar} message={snackbarMessage} />
         </div>
     )

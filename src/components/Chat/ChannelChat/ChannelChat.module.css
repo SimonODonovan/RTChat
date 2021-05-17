@@ -38,6 +38,11 @@
   margin-top: 20px;
 }
 
+.EmojiPickerWrapper {
+  position: absolute;
+  margin-top: calc(100vh - 85vh);
+}
+
 @media only screen and (max-width: 700px) {
   .ChannelChat {
     min-width: 100%;

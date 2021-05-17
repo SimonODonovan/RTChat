@@ -1,61 +1,125 @@
 .Message {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: flex-start;
-    padding: 15px 0;
-    width: 85%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 15px 0;
+  width: 85%;
 }
 
 .MessageAvatar {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    height: 100%;
-    width: 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100%;
+  width: 10%;
 }
 
 .MessageContent {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: space-between;
-    width: 90%;
-    white-space: pre-wrap;
-    margin-left: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 90%;
+  white-space: pre-wrap;
+  margin-left: 10px;
 }
 
 .MessageContent > p {
-    margin: 0;
-    color: #f9f9f9;
-    font-family: "Roboto";
+  margin: 0;
+  color: #f9f9f9;
+  font-family: "Roboto";
 }
 
-.MessageName{
-    font-size: 0.9rem;
+.MessageName {
+  font-size: 0.9rem;
 }
 
-.MessageTime{
-    /* #85898e */
-    color: rgba(133, 137, 142, 0.9);
-    margin-left: 5px;
-    font-size: 0.7rem;
+.MessageTime {
+  /* #85898e */
+  color: rgba(133, 137, 142, 0.9);
+  margin-left: 5px;
+  font-size: 0.7rem;
+}
+
+.MessageImageWrapper {
+  position: relative;
 }
 
 .MessageImage {
-    padding-top: 15px;
-    max-height: 80%;
-    max-width: 80%;
+  padding-top: 15px;
+  max-height: 500px;
+  max-width: 500px;
+}
+
+.UncompressedImageLink {
+  position: absolute;
+  visibility: hidden;
+  margin-top: 15px;
+  margin-left: -30px;
+  opacity: 0;
+  transition: visibility 0.3s linear, opacity 0.1s linear;
+}
+
+.UncompressedImageLink:hover {
+  visibility: visible;
+  opacity: 1;
+}
+
+.MessageImage:hover + .UncompressedImageLink {
+  visibility: visible;
+  opacity: 1;
 }
 
 .MessageText {
-    padding-top: 15px;
-    font-size: 0.9rem;
+  padding-top: 15px;
+  font-size: 0.9rem;
+}
+
+.MessageEmojiButton {
+  margin-top: auto;
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0.3s linear, opacity 0.1s linear;
+}
+
+.Message:hover > .MessageEmojiButton {
+  visibility: visible;
+  opacity: 1;
+}
+
+.MessageReactionDisplay {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.MessageReactionPin {
+  border: 1px hidden black;
+  border-radius: 3px;
+  padding: 3px;
+  margin: 0 3px;
+  background-color: #43464c;
+  color: #9c9fa5;
+  cursor: pointer;
+  width: 38px;
+  height: 22px;
+  margin-bottom: 3px;
+}
+
+.UserPinnedReaction {
+  background-color: #3e598e;
+  color: #a4bff4;
 }
 
 @media only screen and (max-width: 700px) {
-    .MessageContent {
-      margin-left: 20px;
-    }
+  .MessageContent {
+    margin-left: 20px;
   }
+  .MessageImage {
+    width: 100%;
+  }
+}
