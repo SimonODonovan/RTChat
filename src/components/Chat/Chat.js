@@ -18,7 +18,8 @@ const Chat = () => {
     const [userServers, setUserServers] = useState(null);
     const [selectedServer, setSelectedServer] = useState(null);
     const [selectedChannel, setSelectedChannel] = useState(null);
-    const [serverChats, setServerChats] = useState(null);
+    const [loadedChatStates, setLoadedChatStates] = useState({});
+    const [loadedChats, setLoadedChats] = useState([]);
     const [width, setWindowWidth] = useState(0);
     const [menuOpen, setMenuOpen] = useState(true);
 
@@ -34,38 +35,30 @@ const Chat = () => {
         }
     }, [auth.user.uid]);
 
-    // Listen for userServer updates from ServerList component and set ChannelChats to render 
+    // Listen for userServer updates from ServerList component and update Loaded Chat Status dict with new servers
     useEffect(() => {
         if (userServers) {
-            const getServerChannels = async () => {
-                const serverChannels = {};
+            const setServerChannelLoadingStatusDict = async () => {
+                const loadedChannelChats = {};
                 for (const serverName of Object.keys(userServers)) {
-                    const snapshot = await firebase.database().ref(`serverChannels/${serverName}`).once('value');
-                    const snapshotVal = snapshot.val();
-                    if (snapshotVal) {
-                        const channels = Object.keys(snapshotVal);
-                        serverChannels[serverName] = channels;
-                    }
-                }
-                if (Object.keys(serverChannels).length > 0) {
-                    const serverChatsList = [];
-                    for (const server of Object.keys(serverChannels)) {
-                        for (const channel of serverChannels[server]) {
-                            const hide = (selectedServer !== server || selectedChannel !== channel);
-                            const chat = (
-                                <div key={`${server}_${channel}_chat`} className={hide ? css.Hidden : css.ChannelChat}>
-                                    <ChannelChat server={server} channel={channel} />
-                                </div>
-                            )
-                            serverChatsList.push(chat);
+                    if (loadedChatStates && !(serverName in loadedChatStates)) {
+                        const snapshot = await firebase.database().ref(`serverChannels/${serverName}`).once('value');
+                        const snapshotVal = snapshot.val();
+                        if (snapshotVal) {
+                            const channelsLoadingState = {}
+                            for (const channel of Object.keys(snapshotVal)) {
+                                channelsLoadingState[channel] = false;
+                            }
+                            loadedChannelChats[serverName] = channelsLoadingState;
                         }
                     }
-                    setServerChats(serverChatsList);
                 }
-            }
-            getServerChannels();
+                if (Object.keys(loadedChannelChats).length > 0)
+                    setLoadedChatStates(prev => ({...prev, ...loadedChannelChats}));
+            };
+            setServerChannelLoadingStatusDict();
         }
-    }, [userServers, selectedServer, selectedChannel]);
+    }, [userServers, loadedChatStates]);
 
     useEffect(() => {
         const updateDimensions = () => {
@@ -85,6 +78,33 @@ const Chat = () => {
     if (width < 700) {
         AppBarStyles.display = "flex";
         slideState = menuOpen ? css.SlideIn : css.SlideOut;
+    }
+
+    const updateSelectedChannel = channelName => {
+        setSelectedChannel(channelName);
+        if (channelName) {
+            if (!loadedChatStates[selectedServer][channelName]) {
+                setLoadedChatStates(prev => {
+                    const update = { ...prev };
+                    update[selectedServer][channelName] = true;
+                    return update;
+                });
+                loadNewChannelChat(selectedServer, channelName);
+            }
+        }
+    }
+
+    const loadNewChannelChat = (serverName, channelName) => {
+        setLoadedChats(prev => {
+            const update = [...prev];
+            const newChat = {
+                channelChat: <ChannelChat server={selectedServer} channel={channelName} />,
+                server: serverName,
+                channel: channelName
+            };
+            update.push(newChat);
+            return update;
+        });
     }
 
     return (
@@ -108,14 +128,22 @@ const Chat = () => {
                     {selectedServer &&
                         <ServerChannels
                             selectedServer={selectedServer}
-                            setSelectedChannel={setSelectedChannel}
+                            updateSelectedChannel={updateSelectedChannel}
                             selectedChannel={selectedChannel}
                         />
                     }
                 </div>
                 <div className={css.ServerChats} onClick={() => menuOpen && setMenuOpen(false)}>
                     <Backdrop open={menuOpen && width < 700} style={{ zIndex: 0 }} />
-                    {serverChats}
+                    {loadedChats && loadedChats.map(chatDetails => {
+                        const channelChatKey = chatDetails.server + chatDetails.channel + "_chat";
+                        const showChat = selectedServer === chatDetails.server && selectedChannel === chatDetails.channel;
+                        return (
+                            <div key={channelChatKey} className={showChat ? css.ChannelChat : css.Hidden}>
+                                {chatDetails.channelChat}
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
         </div>

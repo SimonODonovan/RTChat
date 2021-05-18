@@ -12,7 +12,7 @@ import useFirebaseDataListener from '../../../../hooks/chat/useFirebaseDataListe
 
 
 const ServerChannelManager = props => {
-    const { selectedServer, setSelectedChannel, selectedChannel, setSelectedListItem } = props;
+    const { selectedServer, updateSelectedChannel, selectedChannel, setSelectedListItem } = props;
     const [showManageDialog, setShowManageDialog] = useState(false);
     const [serverChannels, setServerChannels] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -86,7 +86,7 @@ const ServerChannelManager = props => {
         deleteError && setDeleteError("");
         if (serverChannels.length > 0) {
             if (checked.indexOf(selectedChannel) > -1) {
-                setSelectedChannel(null);
+                updateSelectedChannel(null);
                 setSelectedListItem(null);
             }
             deleteChannels();

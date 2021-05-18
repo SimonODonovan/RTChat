@@ -5,14 +5,13 @@ import css from './ChannelChat.module.css';
 import useAuth from '../../../hooks/auth/useAuth';
 import firebase from 'firebase/app';
 import 'firebase/database';
-import useFirebaseDataListener from '../../../hooks/chat/useFirebaseDataListener';
 
 import Message from './Message/Message';
 
 import 'emoji-mart/css/emoji-mart.css'
 import { Picker } from 'emoji-mart'
 
-import { InputAdornment, IconButton, TextField, Divider, Fab, Zoom, Tooltip, Grow, Snackbar, CircularProgress } from '@material-ui/core';
+import { InputAdornment, IconButton, TextField, Divider, Zoom, Tooltip, Grow, Snackbar, CircularProgress } from '@material-ui/core';
 import SendOutlinedIcon from '@material-ui/icons/SendOutlined';
 import ExpandMoreOutlinedIcon from '@material-ui/icons/ExpandMoreOutlined';
 import AttachFileIcon from '@material-ui/icons/AttachFile';
@@ -25,6 +24,7 @@ const ChannelChat = props => {
     const { server, channel } = props;
 
     const auth = useAuth();
+    const [retrievedInitialMessages, setRetrievedInitialMessages] = useState(false);
     const [messageList, setMessageList] = useState([]);
     const [newMessageText, setNewMessageText] = useState("");
     const [newFileName, setNewFileName] = useState(false);
@@ -38,13 +38,14 @@ const ChannelChat = props => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [fetchingMessages, setFetchingMessages] = useState(false);
     const [messagesExhausted, setMessagesExhausted] = useState(false);
+    const [newestMessageKey, setNewestMessageKey] = useState(false);
+    const [oldestMessageKey, setOldestMessageKey] = useState(false);
+    const [messageListenerActive, setMessageListenerActive] = useState(false);
 
     const messagesEndRef = useRef(null);
-    const messageListRef = useRef(null);
     const chatScrollerRef = useRef(null);
-
     const serverChannelMessagesPath = `/serverMessages/${server}/${channel}`;
-    const channelMessages = useFirebaseDataListener(serverChannelMessagesPath);
+    const messageFetchingLimit = 12;
 
     const clearFileUpload = useCallback(() => {
         if (messageSending)
@@ -125,7 +126,7 @@ const ChannelChat = props => {
         } else {
             uploadMessage();
         };
-    }, [serverChannelMessagesPath, newMessageText, newFileUpload, auth.user.uid,
+    }, [newMessageText, newFileUpload, auth.user.uid, serverChannelMessagesPath,
         channel, server, messageSending, setMessageSending, clearFileUpload])
 
     // Set CTRL + Enter key listener to send new messages.
@@ -140,47 +141,101 @@ const ChannelChat = props => {
         return () => document.removeEventListener('keyup', sendMessageKeyListener)
     }, [sendMessage, newMessageText, newFileUpload]);
 
-    // Clear displayed messages when user changes server or channel.
+    // Get the initial message list for this channel chat
     useEffect(() => {
-        setMessageList([]);
-    }, [server, channel])
+        if (!retrievedInitialMessages) {
+            firebase.database().ref(serverChannelMessagesPath).limitToLast(messageFetchingLimit)
+                .once('value', snapshot => {
+                    const snapshotVal = snapshot.val();
+                    if (snapshotVal) {
+                        const messageKeys = Object.keys(snapshotVal);
+                        setOldestMessageKey(messageKeys[0])
+                        setNewestMessageKey(messageKeys[messageKeys.length - 1])
+                        if (messageKeys.length < messageFetchingLimit) {
+                            setMessagesExhausted(true);
+                        }
+                        const initialMessageList = Object.entries(snapshotVal).map(([messageKey, messageDetails]) => (
+                            <React.Fragment key={messageKey}>
+                                <Message messageKey={messageKey} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)} />
+                                <Divider style={{ backgroundColor: "#484c52" }} className={css.Divider} />
+                            </React.Fragment>
+                        ));
+                        setMessageList(prev => prev.concat(initialMessageList));
+                    } else {
+                        setMessagesExhausted(true);
+                    }
+                    setRetrievedInitialMessages(true);
+                });
+        }
+    }, [retrievedInitialMessages, server, channel, serverChannelMessagesPath, openEmojiReactionMenu])
 
-    // When firebase sends a value event for new message update the display.
+    // Set up a listener for any new messages sent to this channel
     useEffect(() => {
-        if (channelMessages) {
-            const messages = Object.keys(channelMessages).map((key) => {
-                const messageDetails = channelMessages[key];
-                return (
-                    <React.Fragment key={key}>
-                        <Message messageKey={key} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(key)} />
+        if (!messageListenerActive && (newestMessageKey || messagesExhausted)) {
+            setMessageListenerActive(true);
+            let ref = null;
+            if (newestMessageKey) {
+                ref = firebase.database().ref(serverChannelMessagesPath).orderByKey().startAfter(newestMessageKey);
+            } else if (messagesExhausted) {
+                ref = firebase.database().ref(serverChannelMessagesPath);
+            }
+            ref.on("child_added", snapshot => {
+                const messageKey = snapshot.key;
+                const messageDetails = snapshot.val();
+                const newMessage = (
+                    <React.Fragment key={messageKey}>
+                        <Message messageKey={messageKey} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)} />
                         <Divider style={{ backgroundColor: "#484c52" }} className={css.Divider} />
                     </React.Fragment>
-                )
+                );
+                setMessageList(prev => prev.concat([newMessage]))
             });
-            setMessageList(messages);
+            return (ref) => { ref?.off(); }
         }
-    }, [channelMessages, server, channel, openEmojiReactionMenu])
+    }, [messageListenerActive, newestMessageKey, messagesExhausted, serverChannelMessagesPath, server, channel, openEmojiReactionMenu])
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
     const fetchEarlierMessages = () => {
-        if(!fetchingMessages && !messagesExhausted) {
-            setFetchingMessages(true)
-            console.log("TODO fetch earlier messages")
-            //TODO
+        if (!fetchingMessages && !messagesExhausted && oldestMessageKey) {
+            setFetchingMessages(true);
+            firebase.database().ref(serverChannelMessagesPath)
+                .orderByKey()
+                .endBefore(oldestMessageKey)
+                .limitToLast(messageFetchingLimit)
+                .once("value", snapshot => {
+                    const snapshotVal = snapshot.val();
+                    if (snapshotVal) {
+                        const messageKeys = Object.keys(snapshotVal);
+                        setOldestMessageKey(messageKeys[0])
+                        if (messageKeys.length < messageFetchingLimit) {
+                            setMessagesExhausted(true);
+                        }
+                        const olderMessageList = Object.entries(snapshotVal).map(([messageKey, messageDetails]) => (
+                            <React.Fragment key={messageKey}>
+                                <Message messageKey={messageKey} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)} />
+                                <Divider style={{ backgroundColor: "#484c52" }} className={css.Divider} />
+                            </React.Fragment>
+                        ));
+                        setMessageList(prev => olderMessageList.concat(...prev));
+                    } else {
+                        setMessagesExhausted(true);
+                    }
+                    setFetchingMessages(false);
+                });
         }
     }
 
-    const toggleBottomScrollVisibility = event => {
+    const updateScrollPosition = () => {
         const scroller = chatScrollerRef.current;
         const scrollPercentInverted = (scroller.scrollTop / (scroller.scrollHeight - scroller.clientHeight)) * 100;
         const scrollPercent = scrollPercentInverted * -1;
         setShowScrollToBottomButton(scrollPercent > 30);
-        if(scrollPercent > 95)
+        if (scrollPercent > 95 && !fetchingMessages) {
             fetchEarlierMessages();
-
+        }
     }
 
     const updateMessageText = evt => {
@@ -253,8 +308,9 @@ const ChannelChat = props => {
     const wrapperClasses = ["FlexColStartCentered", css.ChannelChat];
     return (
         <div className={wrapperClasses.join(' ')}>
-            <div ref={chatScrollerRef} onScroll={toggleBottomScrollVisibility} className={css.ReverseScrolling} onClick={clearEmojiPicker}>
-                <div ref={messageListRef} className={css.MessageList}>
+            <div ref={chatScrollerRef} onScroll={updateScrollPosition} className={css.ReverseScrolling} onClick={clearEmojiPicker}>
+                <div className={css.MessageList}>
+                    {fetchingMessages && <CircularProgress size={50} />}
                     {messageList}
                     <div ref={messagesEndRef}></div>
                     {messageSending && <CircularProgress size={50} />}
@@ -311,10 +367,10 @@ const ChannelChat = props => {
             </div>
 
             <div className={css.ScrollToBottom} >
-                <Zoom in={showScrollToBottomButton} timeout={{ enter: 300, exit: 300 }} unmountOnExit >
-                    <Fab onClick={scrollToBottom}>
+                <Zoom in={showScrollToBottomButton} timeout={{ enter: 300, exit: 300 }} >
+                    <IconButton onClick={scrollToBottom} style={{backgroundColor: "#f9f9f9"}}>
                         <ExpandMoreOutlinedIcon />
-                    </Fab>
+                    </IconButton>
                 </Zoom>
             </div>
 
