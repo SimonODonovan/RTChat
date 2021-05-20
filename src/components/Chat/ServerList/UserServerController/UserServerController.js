@@ -18,7 +18,7 @@ import {
 const UserServerController = props => {
     const DIALOGTYPES = { CREATE: "create", JOIN: "join", LEAVE: "leave", DELETE: "delete" }
 
-    const {selectedServer, setSelectedServer, setSelectedChannel} = props;
+    const {selectedServer, updateSelectedServer, setSelectedChannel} = props;
 
     const [menuAnchor, setMenuAnchor] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -93,8 +93,8 @@ const UserServerController = props => {
 
             <CreateServerDialog open={showCreateServerDialog} setOpen={setShowCreateServerDialog} />
             <JoinServerDialog open={showJoinServerDialog} setOpen={setShowJoinServerDialog} />
-            <LeaveServerDialog open={showLeaveServerDialog} setOpen={setShowLeaveServerDialog} setSelectedServer={setSelectedServer} selectedServer={selectedServer} setSelectedChannel={setSelectedChannel} />
-            <DeleteServerDialog open={showDeleteServerDialog} setOpen={setShowDeleteServerDialog} setSelectedServer={setSelectedServer} selectedServer={selectedServer} setSelectedChannel={setSelectedChannel} />
+            <LeaveServerDialog open={showLeaveServerDialog} setOpen={setShowLeaveServerDialog} updateSelectedServer={updateSelectedServer} selectedServer={selectedServer} setSelectedChannel={setSelectedChannel} />
+            <DeleteServerDialog open={showDeleteServerDialog} setOpen={setShowDeleteServerDialog} updateSelectedServer={updateSelectedServer} selectedServer={selectedServer} setSelectedChannel={setSelectedChannel} />
         </div>
     );
 };

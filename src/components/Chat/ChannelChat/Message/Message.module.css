@@ -3,7 +3,8 @@
   flex-direction: row;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 15px 0;
+  padding-top: 10px;
+  padding-bottom: 15px;
   width: 85%;
 }
 
@@ -14,6 +15,7 @@
   justify-content: flex-start;
   height: 100%;
   width: 10%;
+  padding-top: 10px;
 }
 
 .MessageContent {
@@ -24,12 +26,6 @@
   width: 90%;
   white-space: pre-wrap;
   margin-left: 10px;
-}
-
-.MessageContent > p {
-  margin: 0;
-  color: #f9f9f9;
-  font-family: "Roboto";
 }
 
 .MessageName {
@@ -50,7 +46,7 @@
 .MessageImage {
   padding-top: 15px;
   max-height: 500px;
-  max-width: 500px;
+  max-width: 100%;
 }
 
 .UncompressedImageLink {
@@ -72,21 +68,49 @@
   opacity: 1;
 }
 
-.MessageText {
-  padding-top: 15px;
-  font-size: 0.9rem;
+.MessageContentHeading {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  align-items: center;
 }
 
-.MessageEmojiButton {
-  margin-top: auto;
+.MessageContentHeading p {
+  margin: 0;
+  color: #f9f9f9;
+  font-family: "Roboto";
+}
+
+.MessageActionButtons {
   visibility: hidden;
   opacity: 0;
   transition: visibility 0.3s linear, opacity 0.1s linear;
+  display: flex;
+  flex-direction: row;
 }
 
-.Message:hover > .MessageEmojiButton {
+.MessageContentHeading:hover > .MessageActionButtons {
   visibility: visible;
   opacity: 1;
+}
+
+.MessageActionButtons {
+  margin-left: auto;
+}
+
+.MessageActionButtons > button {
+  color: #84888d;
+}
+
+.MessageActionButtons > button:hover {
+  color: #f9f9f9;
+}
+
+.MessageText {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #f9f9f9;
+  font-family: "Roboto";
 }
 
 .MessageReactionDisplay {
@@ -113,6 +137,22 @@
 .UserPinnedReaction {
   background-color: #3e598e;
   color: #a4bff4;
+}
+
+.MessageQuote {
+  border-left: 1px solid white;
+  padding: 5px;
+  margin-left: 15px;
+}
+
+.MessageQuote > svg{
+  color: rgba(133, 137, 142, 0.9);
+}
+
+.MessageQuote > p{
+  font-style: italic;
+  margin: 0;
+  color: rgba(133, 137, 142, 0.9);
 }
 
 @media only screen and (max-width: 700px) {

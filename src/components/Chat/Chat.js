@@ -54,7 +54,7 @@ const Chat = () => {
                     }
                 }
                 if (Object.keys(loadedChannelChats).length > 0)
-                    setLoadedChatStates(prev => ({...prev, ...loadedChannelChats}));
+                    setLoadedChatStates(prev => ({ ...prev, ...loadedChannelChats }));
             };
             setServerChannelLoadingStatusDict();
         }
@@ -78,6 +78,11 @@ const Chat = () => {
     if (width < 700) {
         AppBarStyles.display = "flex";
         slideState = menuOpen ? css.SlideIn : css.SlideOut;
+    }
+
+    const updateSelectedServer = serverName => {
+        setSelectedServer(serverName);
+        setSelectedChannel(null);
     }
 
     const updateSelectedChannel = channelName => {
@@ -105,6 +110,24 @@ const Chat = () => {
             update.push(newChat);
             return update;
         });
+        const ref = firebase.database().ref(`serverChannels/${serverName}/${channelName}`);
+        ref.on("value", snapshot => {
+            if (!snapshot.exists()) {
+                const channelName = snapshot.key;
+                if (channelName) {
+                    setLoadedChats(prev => prev.filter(chatDetails => (!(chatDetails.server === serverName && chatDetails.channel === channelName))));
+                    setLoadedChatStates(prev => {
+                        delete prev[serverName][channelName]
+                        return prev
+                    })
+                }
+                ref.off();
+                if(selectedChannel === serverName && selectedChannel === channelName) {
+                    setSelectedChannel(null);
+                }
+            }
+        });
+
     }
 
     return (
@@ -120,7 +143,7 @@ const Chat = () => {
                 <div className={[css.NavWrapper, slideState].join(' ')}>
                     <ServerList
                         selectedServer={selectedServer}
-                        setSelectedServer={setSelectedServer}
+                        updateSelectedServer={updateSelectedServer}
                         setSelectedChannel={setSelectedChannel}
                         setUserServers={setUserServers}
                     />

@@ -16,7 +16,7 @@ import { green } from '@material-ui/core/colors';
 const LeaveServerDialog = props => {
     const auth = useAuth();
 
-    const {selectedServer, setSelectedServer, setSelectedChannel} = props;
+    const {selectedServer, updateSelectedServer, setSelectedChannel} = props;
 
     const [userServers, setUserServers] = useState(null);
     const [leaveServerChecks, setLeaveServerChecks] = useState({});
@@ -57,10 +57,10 @@ const LeaveServerDialog = props => {
         const userServerRef = firebase.database().ref(`users/${auth.user.uid}/subscribedServers/${serverNameLower}`);
         userServerRef.remove();
         if(serverName === selectedServer) {
-            setSelectedServer(null);
+            updateSelectedServer(null);
             setSelectedChannel(null);
         }
-    }, [auth.user.uid, selectedServer, setSelectedServer, setSelectedChannel])
+    }, [auth.user.uid, selectedServer, updateSelectedServer, setSelectedChannel])
 
     // Create and set the list display for the set users servers
     useEffect(() => {

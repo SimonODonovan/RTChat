@@ -12,10 +12,12 @@ import useFirebaseDataListener from '../../../../hooks/chat/useFirebaseDataListe
 import { Avatar, CircularProgress, Fade, IconButton, Tooltip, useTheme } from '@material-ui/core';
 import SentimentVerySatisfiedOutlinedIcon from '@material-ui/icons/SentimentVerySatisfiedOutlined';
 import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined';
+import ReplyIcon from '@material-ui/icons/Reply';
+import PanoramaOutlinedIcon from '@material-ui/icons/PanoramaOutlined';
 
 const Message = props => {
-    const { messageKey, server, channel, openEmojiReactionMenu } = props;
-    const { message, timestamp, file, userUID } = props.messageDetails;
+    const { messageKey, server, channel, openEmojiReactionMenu, replyToMessage } = props;
+    const { message, timestamp, file, fileType, userUID, quote } = props.messageDetails;
     const auth = useAuth();
     const theme = useTheme();
     const hasImage = Boolean(file);
@@ -24,6 +26,8 @@ const Message = props => {
     const [userDisplayName, setUserDisplayName] = useState("");
     const [imageUrlCompressed, setImageUrlCompressed] = useState(false);
     const [imageUrlUncompressed, setImageUrlUncompressed] = useState(false);
+    const [gifUrl, setGifUrl] = useState(false);
+    const [webmUrl, setWebmUrl] = useState(false);
     const [imageLoading, setImageLoading] = useState(hasImage);
     const [messageReactionsDisplay, setMessageReactionsDisplay] = useState(null);
 
@@ -31,19 +35,32 @@ const Message = props => {
     const messageReactions = useFirebaseDataListener(messageReactionsPath);
 
     if (file) {
-        const splitFileURI = file.split('/');
-        splitFileURI[splitFileURI.length] = splitFileURI[splitFileURI.length - 1];
-        splitFileURI[splitFileURI.length - 2] = "uncompressed";
-        const uncompressedImageFilePath = splitFileURI.join('/');
-        firebase.storage().ref(file).getDownloadURL()
-            .then(fileUrl => {
-                setImageUrlCompressed(fileUrl);
-            });
-        firebase.storage().ref(uncompressedImageFilePath).getDownloadURL()
-            .then(fileUrl => {
-                setImageUrlUncompressed(fileUrl);
-            })
-            .catch(error => null);
+        const ref = firebase.storage().ref(file);
+        if (fileType === 'video/webm') {
+            ref.getDownloadURL()
+                .then(fileUrl => {
+                    setWebmUrl(fileUrl);
+                });
+        } else if (fileType === 'image/gif') {
+            ref.getDownloadURL()
+                .then(fileUrl => {
+                    setGifUrl(fileUrl);
+                });
+        } else {
+            const splitFileURI = file.split('/');
+            splitFileURI[splitFileURI.length] = splitFileURI[splitFileURI.length - 1];
+            splitFileURI[splitFileURI.length - 2] = "uncompressed";
+            const uncompressedImageFilePath = splitFileURI.join('/');
+            firebase.storage().ref(uncompressedImageFilePath).getDownloadURL()
+                .then(fileUrl => {
+                    setImageUrlUncompressed(fileUrl);
+                })
+                .catch(error => null);
+            ref.getDownloadURL()
+                .then(fileUrl => {
+                    setImageUrlCompressed(fileUrl);
+                });
+        }
     }
 
     // Track message reactions and update display on change
@@ -140,15 +157,35 @@ const Message = props => {
                 <Avatar alt="Avatar Image" src={avatarUrl} style={{ width: theme.spacing(6), height: theme.spacing(6), }} />
             </div>
             <div className={css.MessageContent}>
-                <p>
-                    <span className={css.MessageName}>{userDisplayName}</span>
-                    <span className={css.MessageTime}>{localeDate + " at " + localeTime}</span>
-                </p>
+                <div className={css.MessageContentHeading}>
+                    <p>
+                        <span className={css.MessageName}>{userDisplayName}</span>
+                        <span className={css.MessageTime}>{localeDate + " at " + localeTime}</span>
+                    </p>
+
+                    <div className={css.MessageActionButtons}>
+                        <IconButton size="small" onClick={() => replyToMessage({ userUID: userUID, userDisplayName: userDisplayName, message: message, file: file, timestamp: localeDate + " at " + localeTime})}>
+                            <ReplyIcon />
+                        </IconButton>
+                        <IconButton size="small" onClick={openEmojiReactionMenu}>
+                            <SentimentVerySatisfiedOutlinedIcon />
+                        </IconButton>
+                    </div>
+                </div>
+
+                {quote && 
+                    <div className={css.MessageQuote}>
+                        <p>{quote.userDisplayName} <span className={css.MessageTime}>{quote.timestamp}</span></p>
+                        {quote.hasFile && <PanoramaOutlinedIcon/>}
+                        <p>"{quote.message}"</p>
+                    </div>
+                }
+
                 {imageLoading ? <CircularProgress /> : null}
-                {imageUrlCompressed ?
+                {(imageUrlCompressed || gifUrl) &&
                     <Fade in={true}>
                         <div className={css.MessageImageWrapper}>
-                            <img className={css.MessageImage} onLoad={() => setImageLoading(false)} src={imageUrlCompressed} alt="attached message file" />
+                            <img className={css.MessageImage} onLoad={() => setImageLoading(false)} src={imageUrlCompressed || gifUrl} alt="attached message file" />
                             {imageUrlUncompressed &&
                                 <a href={imageUrlUncompressed} target="_blank" rel="noreferrer" className={css.UncompressedImageLink}>
                                     <LinkOutlinedIcon style={{ color: "#f9f9f9" }} />
@@ -156,16 +193,16 @@ const Message = props => {
                             }
                         </div>
                     </Fade>
-                    :
-                    null
+                }
+                {webmUrl &&
+                    <Fade in={true}>
+                        <div className={css.MessageImageWrapper}>
+                            <video className={css.MessageImage} src={webmUrl} type="video/webm" controls preload="metadata" onLoadedData={() => setImageLoading(false)} />
+                        </div>
+                    </Fade>
                 }
                 <p className={css.MessageText}>{message}</p>
                 {messageReactionsDisplay}
-            </div>
-            <div className={css.MessageEmojiButton}>
-                <IconButton style={{ color: "#f9f9f9" }} onClick={openEmojiReactionMenu}>
-                    <SentimentVerySatisfiedOutlinedIcon />
-                </IconButton>
             </div>
         </div>
     )

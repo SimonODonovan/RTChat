@@ -11,12 +11,14 @@ import Message from './Message/Message';
 import 'emoji-mart/css/emoji-mart.css'
 import { Picker } from 'emoji-mart'
 
-import { InputAdornment, IconButton, TextField, Divider, Zoom, Tooltip, Grow, Snackbar, CircularProgress } from '@material-ui/core';
+import { InputAdornment, IconButton, TextField, Divider, Zoom, Tooltip, Grow, Snackbar, CircularProgress, Slide } from '@material-ui/core';
 import SendOutlinedIcon from '@material-ui/icons/SendOutlined';
 import ExpandMoreOutlinedIcon from '@material-ui/icons/ExpandMoreOutlined';
 import AttachFileIcon from '@material-ui/icons/AttachFile';
 import CancelOutlinedIcon from '@material-ui/icons/CancelOutlined';
 import SentimentVerySatisfiedOutlinedIcon from '@material-ui/icons/SentimentVerySatisfiedOutlined';
+import ImageOutlinedIcon from '@material-ui/icons/ImageOutlined';
+import ClearOutlinedIcon from '@material-ui/icons/ClearOutlined';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,6 +32,7 @@ const ChannelChat = props => {
     const [newFileName, setNewFileName] = useState(false);
     const [newFileUpload, setNewFileUpload] = useState(false);
     const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
+    const [scrollAtBottom, setScrollAtBottom] = useState(false);
     const [chatRows, setChatRows] = useState(1);
     const [messageSending, setMessageSending] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -41,6 +44,7 @@ const ChannelChat = props => {
     const [newestMessageKey, setNewestMessageKey] = useState(false);
     const [oldestMessageKey, setOldestMessageKey] = useState(false);
     const [messageListenerActive, setMessageListenerActive] = useState(false);
+    const [messageQuote, setMessageQuote] = useState(false);
 
     const messagesEndRef = useRef(null);
     const chatScrollerRef = useRef(null);
@@ -62,6 +66,12 @@ const ChannelChat = props => {
             setShowEmojiPicker(true);
         }
     }, [showEmojiPicker])
+
+    // After moving channel chat scroll, make sure it sticks to the bottom during messageList updates
+    useEffect(() => {
+        if (scrollAtBottom && chatScrollerRef.current)
+            chatScrollerRef.current.scrollTop = 0;
+    }, [scrollAtBottom, messageList])
 
     const sendMessage = useCallback(() => {
         const downscaleImage = (img, newWidth = 500, imageType = "image/jpeg", quality = 0.8) => {
@@ -87,12 +97,14 @@ const ChannelChat = props => {
             return
         }
         setMessageSending(true);
-        const uploadMessage = (filePath = false) => {
+        const uploadMessage = (filePath = false, fileType = false) => {
             const messageDetails = {
                 userUID: auth.user.uid,
-                message: newMessageText,
+                message: newMessageText.trim(),
                 file: filePath,
-                timestamp: new Date().toUTCString()
+                timestamp: new Date().toUTCString(),
+                fileType: fileType,
+                quote: messageQuote
             }
             const serverChannelMessagesRef = firebase.database().ref(serverChannelMessagesPath);
             serverChannelMessagesRef.push(messageDetails, error => {
@@ -101,6 +113,7 @@ const ChannelChat = props => {
                     setSnackbarOpen(true);
                 } else {
                     setNewMessageText("");
+                    setMessageQuote(false)
                 }
                 clearFileUpload();
                 setMessageSending(false);
@@ -109,25 +122,58 @@ const ChannelChat = props => {
         }
         if (newFileUpload) {
             const uuid = uuidv4();
-            const downscaledImagedDataUrl = downscaleImage(newFileUpload.compressed);
-            const compressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/${uuid}`);
-            compressedStorRef.putString(downscaledImagedDataUrl, 'data_url') //newFileUpload
-                .then(ret => {
-                    const filePath = ret.ref.fullPath;
-                    uploadMessage(filePath);
-                    const uncompressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/uncompressed/${uuid}`);
-                    uncompressedStorRef.put(newFileUpload.uncompressed)
-                })
-                .catch(e => {
-                    setSnackbarMessage("Could not upload file, please try again.");
-                    setSnackbarOpen(true);
-                    setMessageSending(false);
-                });
+            if (newFileUpload.video) {
+                const uncompressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/uncompressed/${uuid}`);
+                uncompressedStorRef.put(newFileUpload.video)
+                    .then(ret => {
+                        const filePath = ret.ref.fullPath;
+                        uploadMessage(filePath, newFileUpload.fileType);
+                    })
+                    .catch(e => {
+                        setSnackbarMessage("Could not upload file, please try again.");
+                        setSnackbarOpen(true);
+                        setMessageSending(false);
+                    });
+            } else {
+                const downscaledImagedDataUrl = downscaleImage(newFileUpload.compressed);
+                const compressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/${uuid}`);
+                compressedStorRef.putString(downscaledImagedDataUrl, 'data_url')
+                    .then(ret => {
+                        const filePath = ret.ref.fullPath;
+                        const uncompressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/uncompressed/${uuid}`);
+                        uncompressedStorRef.put(newFileUpload.uncompressed)
+                            .then(() => {
+                                uploadMessage(filePath, newFileUpload.fileType);
+                            })
+                            .catch(e => {
+                                setSnackbarMessage("Could not upload file, please try again.");
+                                setSnackbarOpen(true);
+                                setMessageSending(false);
+                                firebase.storage().ref(filePath).delete();
+                            });
+                    })
+                    .catch(() => {
+                        setSnackbarMessage("Could not upload file, please try again.");
+                        setSnackbarOpen(true);
+                        setMessageSending(false);
+                    });
+            }
         } else {
             uploadMessage();
         };
     }, [newMessageText, newFileUpload, auth.user.uid, serverChannelMessagesPath,
-        channel, server, messageSending, setMessageSending, clearFileUpload])
+        channel, server, messageSending, setMessageSending, clearFileUpload, messageQuote])
+
+    const replyToMessage = messageDetails => {
+        setMessageQuote(
+            {
+                userDisplayName: messageDetails.userDisplayName,
+                message: messageDetails.message,
+                hasFile: Boolean(messageDetails.file),
+                timestamp: messageDetails.timestamp
+            }
+        )
+    }
 
     // Set CTRL + Enter key listener to send new messages.
     // Clean event listener on component unmount.
@@ -156,7 +202,14 @@ const ChannelChat = props => {
                         }
                         const initialMessageList = Object.entries(snapshotVal).map(([messageKey, messageDetails]) => (
                             <React.Fragment key={messageKey}>
-                                <Message messageKey={messageKey} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)} />
+                                <Message
+                                    messageKey={messageKey}
+                                    messageDetails={messageDetails}
+                                    server={server}
+                                    channel={channel}
+                                    openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)}
+                                    replyToMessage={replyToMessage}
+                                />
                                 <Divider style={{ backgroundColor: "#484c52" }} className={css.Divider} />
                             </React.Fragment>
                         ));
@@ -184,7 +237,14 @@ const ChannelChat = props => {
                 const messageDetails = snapshot.val();
                 const newMessage = (
                     <React.Fragment key={messageKey}>
-                        <Message messageKey={messageKey} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)} />
+                        <Message
+                            messageKey={messageKey}
+                            messageDetails={messageDetails}
+                            server={server}
+                            channel={channel}
+                            openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)}
+                            replyToMessage={replyToMessage}
+                        />
                         <Divider style={{ backgroundColor: "#484c52" }} className={css.Divider} />
                     </React.Fragment>
                 );
@@ -215,7 +275,14 @@ const ChannelChat = props => {
                         }
                         const olderMessageList = Object.entries(snapshotVal).map(([messageKey, messageDetails]) => (
                             <React.Fragment key={messageKey}>
-                                <Message messageKey={messageKey} messageDetails={messageDetails} server={server} channel={channel} openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)} />
+                                <Message
+                                    messageKey={messageKey}
+                                    messageDetails={messageDetails}
+                                    server={server}
+                                    channel={channel}
+                                    openEmojiReactionMenu={() => openEmojiReactionMenu(messageKey)}
+                                    replyToMessage={replyToMessage}
+                                />
                                 <Divider style={{ backgroundColor: "#484c52" }} className={css.Divider} />
                             </React.Fragment>
                         ));
@@ -232,10 +299,11 @@ const ChannelChat = props => {
         const scroller = chatScrollerRef.current;
         const scrollPercentInverted = (scroller.scrollTop / (scroller.scrollHeight - scroller.clientHeight)) * 100;
         const scrollPercent = scrollPercentInverted * -1;
-        setShowScrollToBottomButton(scrollPercent > 30);
+        setShowScrollToBottomButton(scrollPercent > 10);
         if (scrollPercent > 95 && !fetchingMessages) {
             fetchEarlierMessages();
         }
+        setScrollAtBottom(scrollPercent < 1);
     }
 
     const updateMessageText = evt => {
@@ -254,9 +322,10 @@ const ChannelChat = props => {
         const doPreliminaryValidation = imageFile => {
             let error = false;
             const isImage = imageFile.type.includes('image');
+            const isWebm = imageFile.type === 'video/webm';
             const isImageTooLarge = imageFile.size > 8388608; //8MB
-            if (!isImage) {
-                error = 'Invalid image content. Please try another image.';
+            if (!(isImage || isWebm)) {
+                error = 'Invalid file content. Please try another image.';
             } else if (isImageTooLarge) {
                 error = 'File too large, maximum size 8MB.';
             }
@@ -269,16 +338,21 @@ const ChannelChat = props => {
                 showImageError(error);
                 return;
             }
-            const img = new Image();
-            img.onload = () => {
-                setNewFileName(imageFile.name);
-                setNewFileUpload({ compressed: img, uncompressed: imageFile });
-                setSnackbarMessage("");
-                setSnackbarOpen(false);
-            };
-            img.onerror = () => showImageError('Invalid image content. Please try another image.');
-            const fileURI = URL.createObjectURL(imageFile);
-            img.src = fileURI;
+            const isVideoType = imageFile.type === 'video/webm' || imageFile.type === 'image/gif';
+            setNewFileName(imageFile.name);
+            setSnackbarMessage("");
+            setSnackbarOpen(false);
+            if (isVideoType) {
+                setNewFileUpload({ video: imageFile, fileType: imageFile.type });
+            } else {
+                const img = new Image();
+                img.onload = () => {
+                    setNewFileUpload({ compressed: img, uncompressed: imageFile, fileType: imageFile.type });
+                };
+                img.onerror = () => showImageError('Invalid image content. Please try another image.');
+                const fileURI = URL.createObjectURL(imageFile);
+                img.src = fileURI;
+            }
         }
     }
 
@@ -312,69 +386,94 @@ const ChannelChat = props => {
                 <div className={css.MessageList}>
                     {fetchingMessages && <CircularProgress size={50} />}
                     {messageList}
-                    <div ref={messagesEndRef}></div>
                     {messageSending && <CircularProgress size={50} />}
+                    <div ref={messagesEndRef}></div>
                 </div>
             </div>
 
-            <div className={css.NewMessageInput}>
-                <TextField
-                    variant="outlined"
-                    autoComplete={"false"}
-                    fullWidth
-                    multiline
-                    rows={chatRows}
-                    placeholder={`Message ${channel}`}
-                    disabled={messageSending}
-                    value={newMessageText}
-                    onChange={evt => updateMessageText(evt)}
-                    InputProps={{
-                        style: { color: "#f9f9f9", fontFamily: "Roboto" },
-                        startAdornment: (
-                            <InputAdornment>
-                                {!newFileName ?
-                                    <Tooltip title="Upload an image">
-                                        <IconButton style={{ color: "#f9f9f9" }} component="label" disabled={messageSending}>
-                                            <AttachFileIcon />
-                                            <input type="file" accept="image/*;capture=camera" onChange={evt => handleFileUploadSelected(evt.target)} hidden />
-                                        </IconButton>
-                                    </Tooltip>
-                                    :
-                                    <Tooltip title={`Remove ${newFileName}`}>
-                                        <IconButton onClick={clearFileUpload} style={{ color: "#f9f9f9" }}>
-                                            <CancelOutlinedIcon />
-                                        </IconButton>
-                                    </Tooltip>
-                                }
-                                <IconButton style={{ color: "#f9f9f9" }} onClick={() => openEmojiReactionMenu()}>
-                                    <SentimentVerySatisfiedOutlinedIcon />
+            <div className={css.NewMessageInputWrapper}>
+                {messageQuote &&
+                    <div style={{ overflow: 'hidden' }}>
+                        <Slide direction="up" in={Boolean(messageQuote)}>
+                            <div className={css.MessageReplyWrapper}>
+                                <span />
+                                <div>
+                                    <p>
+                                        {messageQuote.hasFile && <ImageOutlinedIcon />}
+                                        {messageQuote.message && messageQuote.message}
+                                    </p>
+                                </div>
+                                <IconButton onClick={() => setMessageQuote(false)}>
+                                    <ClearOutlinedIcon />
                                 </IconButton>
-                            </InputAdornment>
-                        ),
-                        endAdornment: (
-                            <Grow in={Boolean(newFileUpload) || Boolean(newMessageText)}>
+                            </div>
+                        </Slide>
+                    </div>
+                }
+                <div className={css.NewMessageInput}>
+                    <TextField
+                        variant="outlined"
+                        autoComplete={"false"}
+                        fullWidth
+                        multiline
+                        rows={chatRows}
+                        placeholder={`Message ${channel}`}
+                        disabled={messageSending}
+                        value={newMessageText}
+                        onChange={evt => updateMessageText(evt)}
+                        inputProps={{ maxLength: 2000 }}
+                        InputProps={{
+                            style: { color: "#f9f9f9", fontFamily: "Roboto" },
+                            startAdornment: (
                                 <InputAdornment>
-                                    <Tooltip title="Ctrl + Enter also sends!">
-                                        <IconButton onClick={sendMessage} style={{ color: "#f9f9f9" }}>
-                                            <SendOutlinedIcon />
-                                        </IconButton>
-                                    </Tooltip>
+                                    {!newFileName ?
+                                        <Tooltip title="Upload an image">
+                                            <IconButton style={{ color: "#f9f9f9" }} component="label" disabled={messageSending}>
+                                                <AttachFileIcon />
+                                                <input type="file" accept="image/*;capture=camera" onChange={evt => handleFileUploadSelected(evt.target)} hidden />
+                                            </IconButton>
+                                        </Tooltip>
+                                        :
+                                        <Tooltip title={`Remove ${newFileName}`}>
+                                            <IconButton onClick={clearFileUpload} style={{ color: "#f9f9f9" }}>
+                                                <CancelOutlinedIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                    }
+                                    <IconButton style={{ color: "#f9f9f9" }} onClick={() => openEmojiReactionMenu()}>
+                                        <SentimentVerySatisfiedOutlinedIcon />
+                                    </IconButton>
                                 </InputAdornment>
-                            </Grow>
-                        )
-                    }}
-                />
+                            ),
+                            endAdornment: (
+                                <Grow in={Boolean(newFileUpload) || Boolean(newMessageText)}>
+                                    <InputAdornment>
+                                        <Tooltip title="Ctrl + Enter also sends!">
+                                            <IconButton onClick={sendMessage} style={{ color: "#f9f9f9" }}>
+                                                <SendOutlinedIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </InputAdornment>
+                                </Grow>
+                            )
+                        }}
+                    />
+                </div>
             </div>
 
             <div className={css.ScrollToBottom} >
                 <Zoom in={showScrollToBottomButton} timeout={{ enter: 300, exit: 300 }} >
-                    <IconButton onClick={scrollToBottom} style={{backgroundColor: "#f9f9f9"}}>
+                    <IconButton onClick={scrollToBottom} style={{ backgroundColor: "#f9f9f9" }}>
                         <ExpandMoreOutlinedIcon />
                     </IconButton>
                 </Zoom>
             </div>
 
-            {showEmojiPicker && <div className={css.EmojiPickerWrapper}><Picker emoji="" title="" onSelect={handleEmojiSelect} /></div>}
+            {showEmojiPicker &&
+                <div className={css.EmojiPickerWrapper}>
+                    <Picker emoji="" title="" onSelect={handleEmojiSelect} perLine={7} />
+                </div>
+            }
             <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={closeSnackbar} message={snackbarMessage} />
         </div>
     )

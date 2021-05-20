@@ -23,7 +23,7 @@ const ServerChannels = props => {
             setSelectedListItem(channelName);
             updateSelectedChannel(channelName);
         }
-        if (serverChannels && Object.keys(serverChannels).length > 0) {
+        if (serverChannels) {
             const serverChannelDisplayList = (
                 Object.keys(serverChannels).map(channelName => {
                     const key = channelName + '_sc';
@@ -44,13 +44,17 @@ const ServerChannels = props => {
         }
     }, [updateSelectedChannel, selectedListItem, serverChannels]);
 
+    useEffect(() => {
+        setSelectedListItem(null);
+    }, [selectedServer])
+
     return (
         <div className={css.ChannelList}>
             {serverAdmin ?
                 <div className={css.ChannelManager}>
                     <ServerChannelManager
                         selectedServer={selectedServer}
-                        setSelectedChannel={updateSelectedChannel}
+                        updateSelectedChannel={updateSelectedChannel}
                         selectedChannel={selectedChannel}
                         setSelectedListItem={setSelectedListItem}
                     />
@@ -67,7 +71,7 @@ const ServerChannels = props => {
 };
 
 const arePropsEqual = (prevState, nextState) => {
-    return prevState.selectedServer === nextState.selectedServer && prevState.selectedChannel === nextState.selectedChannel;
+    return (prevState.selectedServer === nextState.selectedServer) && (prevState.selectedChannel === nextState.selectedChannel);
 };
 
 export default React.memo(ServerChannels, arePropsEqual);

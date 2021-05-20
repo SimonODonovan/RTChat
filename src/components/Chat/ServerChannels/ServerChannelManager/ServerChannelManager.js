@@ -74,9 +74,14 @@ const ServerChannelManager = props => {
         }
         const deleteChannelImages = async () => {
             for (const checkedChannel of checked) {
-                const storRef = `serverChatImages/${selectedServer}/${checkedChannel}`;
-                const res = await firebase.storage().ref(storRef).listAll();
-                for (const item of res.items) {
+                const storRefCompressed = `serverChatImages/${selectedServer}/${checkedChannel}`;
+                const compressedImages = await firebase.storage().ref(storRefCompressed).listAll();
+                for (const item of compressedImages.items) {
+                    item.delete();
+                }
+                const storRefUncompressed = `serverChatImages/${selectedServer}/${checkedChannel}/uncompressed`;
+                const uncompressedImages = await firebase.storage().ref(storRefUncompressed).listAll();
+                for (const item of uncompressedImages.items) {
                     item.delete();
                 }
             }

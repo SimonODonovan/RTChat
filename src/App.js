@@ -8,28 +8,30 @@ const App = () => {
 
   //TODO
   //Enhancements
-  // Add indexed based gets for chat channels, only fetch messages when needed
-  // Allow replies to messages
-  // @ person functionality
-  // Add server users status pane
   // Add auth rules to Storage (set metadata on file uploads + https://firebase.google.com/docs/rules/insecure-rules?authuser=0#storage)
+  // Change message hover buttons to appear when hovering over an options menu icon rather than on the message itself, css redrawing prevents smooth scrolling
+  // Add server users status pane
   
   //Fixes
-  // Set selectedChannel to null when changing servers
-  // Adjust emoji mart size for small mobile device widths (<360px)
-  // Listen for channel add/remove in channel selector - not updated when owner removes channels
-  //  Check delete of both compressed and uncompressed images when deleting a channel
-  // Set delete servers width wider on mobiles, icon buttons overlapping text 
-  // Do not allow .gifs for server and user avatars ? or remove .gifs from the image compression route
-  // Some images do not get full link when message is sent to channel
-
 
   //Done
-  // ChannelChats
-  //   Prevent loading every channel on every server on app init. Now channel chats only init when clicked for the first time.
-  //   Will now only fetch a subset of messages to start. And will listen for any new messages after the last of the initial message list.
-  //   Will now fetch earlier messages when scrolling has reached 95% of the way to the top of the current channel chat.
-  // Change scrollToBottom FAB to be an IconButton instead.
+  // Enhancements
+  //   Added support for .webm video files up to 8MB in size.
+  //   Add support for quoting contents of previous messages when writing a new chat message.
+
+  // Fixes
+  //   Set selectedChannel to null when changing servers.
+  //   Set ServerChannels selectedListItem to null when selectedServer changes.
+  //   Set EmojiMart emojis perLine to 7 to improve width scaling on smaller screens.
+  //   Set value listener when loading channels to listen for channel deletion, on delete remove channel chat from loadedChannelChats.
+  //   Delete both compressed and uncompressed images when deleting a channel.
+  //   Set .UserServerDialog css class in UserServerDialogs to have 300px width regardless of screen size. Fixes button overlap on mobile.
+  //   Remove gifs from image compression file upload path. They are stored only in the uncompressed folder now.
+  //   Full image link now appears correctly. Will not upload message details until compressed & non-compressed images are uploaded.
+  //   Delete all channel images when a server is deleted.
+  //   Add missing call to update setLoadedChatStates in Chat.js when deleting a channel chat that has been loaded.
+  //   Trim new message text in channel chat when it us uploaded.
+  //   Limit new message text in channel chat to 2000 characters.
 
 
   return (

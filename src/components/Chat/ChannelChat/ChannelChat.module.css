@@ -20,12 +20,57 @@
   width: 100%;
 }
 
-.NewMessageInput {
-  background-color: #484c52;
+.NewMessageInputWrapper { 
   margin-top: auto;
   margin-bottom: 20px;
-  border-radius: 5px;
   width: 95%;
+  max-width: calc(100vw - 300px);
+}
+
+.NewMessageInput {
+  background-color: #484c52;
+  border-radius: 5px;
+}
+
+.MessageReplyWrapper {
+  max-width: 90%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 2rem;
+  background-color: #36393f;
+  padding-left: 15px;
+}
+
+.MessageReplyWrapper > span{
+  height: 1rem;
+  width: 5%;
+  max-width: 10px;
+  border-left: 2px solid white;
+  border-top: 2px solid white;
+  border-top-left-radius: 5px;
+  align-self: flex-end;
+  padding-right: 10px;
+}
+
+.MessageReplyWrapper > div{
+  max-width: 95%;
+  margin-left: 2px;
+}
+
+.MessageReplyWrapper > div > p{
+  color: rgba(133, 137, 142, 0.9);
+  margin: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-style: italic;
+  white-space: nowrap;
+  width: 100%;
+  padding-right: 15px;
+}
+
+.MessageReplyWrapper > button {
+  width: 5%;
 }
 
 .Divider {
@@ -40,7 +85,7 @@
 
 .EmojiPickerWrapper {
   position: absolute;
-  margin-top: calc(100vh - 85vh);
+  margin-top: calc(100vh - 75vh);
 }
 
 @media only screen and (max-width: 700px) {
@@ -48,5 +93,11 @@
     min-width: 100%;
     height: 100%;
     width: 100%;
+  }
+  .EmojiPickerWrapper {
+    margin-top: calc(100vh - 95vh);
+  }
+  .NewMessageInputWrapper { 
+    max-width: 90vw;
   }
 }
