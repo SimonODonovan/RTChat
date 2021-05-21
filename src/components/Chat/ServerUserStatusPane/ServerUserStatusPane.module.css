@@ -1,0 +1,20 @@
+.ServerUserStatusPane {
+    background-color: #292C32;
+    color: #84888d;
+    height: 100%;
+    min-width: 100px;
+}
+
+.ServerUserStatusPane > ul > div {
+    color: #84888d;
+}
+
+.ServerUserStatusPane > ul > li {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+.ServerUserStatusPane > ul > li > div{
+    min-width: 0px;
+    margin-right: 10px;
+}

@@ -14,6 +14,7 @@ import SentimentVerySatisfiedOutlinedIcon from '@material-ui/icons/SentimentVery
 import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined';
 import ReplyIcon from '@material-ui/icons/Reply';
 import PanoramaOutlinedIcon from '@material-ui/icons/PanoramaOutlined';
+import MoreVertOutlinedIcon from '@material-ui/icons/MoreVertOutlined';
 
 const Message = props => {
     const { messageKey, server, channel, openEmojiReactionMenu, replyToMessage } = props;
@@ -30,6 +31,7 @@ const Message = props => {
     const [webmUrl, setWebmUrl] = useState(false);
     const [imageLoading, setImageLoading] = useState(hasImage);
     const [messageReactionsDisplay, setMessageReactionsDisplay] = useState(null);
+    const [showMenuActions, setShowMenuActions] = useState(false);
 
     const messageReactionsPath = `serverMessages/${server}/${channel}/${messageKey}/reactions`;
     const messageReactions = useFirebaseDataListener(messageReactionsPath);
@@ -163,21 +165,36 @@ const Message = props => {
                         <span className={css.MessageTime}>{localeDate + " at " + localeTime}</span>
                     </p>
 
-                    <div className={css.MessageActionButtons}>
-                        <IconButton size="small" onClick={() => replyToMessage({ userUID: userUID, userDisplayName: userDisplayName, message: message, file: file, timestamp: localeDate + " at " + localeTime})}>
-                            <ReplyIcon />
-                        </IconButton>
-                        <IconButton size="small" onClick={openEmojiReactionMenu}>
-                            <SentimentVerySatisfiedOutlinedIcon />
-                        </IconButton>
+                    <div id={`${messageKey}_MessageActionWrapper`} className={css.MessageActionWrapper} onClick={()=>setShowMenuActions(prev => !prev)} onMouseLeave={()=>setShowMenuActions(false)}>
+                        {showMenuActions &&
+                            <div className={css.MessageActionButtons}>
+                                <React.Fragment>
+                                    <Tooltip title="Quote">
+                                        <IconButton size="small" onClick={() => replyToMessage({ userUID: userUID, userDisplayName: userDisplayName, message: message, file: file, timestamp: localeDate + " at " + localeTime })}>
+                                            <ReplyIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="React">
+                                        <IconButton size="small" onClick={openEmojiReactionMenu}>
+                                            <SentimentVerySatisfiedOutlinedIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                </React.Fragment>
+                            </div>
+                        }
+                        <div className={css.MessageActionMoreIcon} >
+                            <IconButton size="small">
+                                <MoreVertOutlinedIcon />
+                            </IconButton>
+                        </div>
                     </div>
                 </div>
 
-                {quote && 
+                {quote &&
                     <div className={css.MessageQuote}>
                         <p>{quote.userDisplayName} <span className={css.MessageTime}>{quote.timestamp}</span></p>
-                        {quote.hasFile && <PanoramaOutlinedIcon/>}
-                        <p>"{quote.message}"</p>
+                        {quote.hasFile && <PanoramaOutlinedIcon />}
+                        {quote.message && <p>"{quote.message}"</p>}
                     </div>
                 }
 

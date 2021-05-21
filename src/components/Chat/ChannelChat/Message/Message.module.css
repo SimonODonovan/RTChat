@@ -81,28 +81,22 @@
   font-family: "Roboto";
 }
 
-.MessageActionButtons {
-  visibility: hidden;
-  opacity: 0;
-  transition: visibility 0.3s linear, opacity 0.1s linear;
+.MessageActionWrapper {
+  margin-left: auto;
   display: flex;
   flex-direction: row;
 }
 
-.MessageContentHeading:hover > .MessageActionButtons {
-  visibility: visible;
-  opacity: 1;
-}
-
 .MessageActionButtons {
-  margin-left: auto;
+  display: flex;
+  flex-direction: row;
 }
 
-.MessageActionButtons > button {
+.MessageActionWrapper button {
   color: #84888d;
 }
 
-.MessageActionButtons > button:hover {
+.MessageActionWrapper button:hover {
   color: #f9f9f9;
 }
 
