@@ -1,9 +1,18 @@
 .ChatWrapper {
   height: 100%;
+  overflow: hidden;
 }
 
-.AppBar {
+.ChatWrapper > header > div {
   height: 64px;
+}
+
+.ChatWrapper > header > div > button {
+  color: #f9f9f9; 
+}
+
+.ChatWrapper > header > div > button:nth-child(2) {
+margin-left: auto;
 }
 
 .ChatComponents {
@@ -28,6 +37,20 @@
 .ServerChats {
   height: 100%;
   width: 85%;
+}
+
+.OpenUserStatusPanel {
+  background-color: #292C32;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.OpenUserStatusPanel > svg {
+  height: 1.5rem;
+  width: 1.5rem;
+  color: #f9f9f9; 
 }
 
 .Hidden {
@@ -71,12 +94,15 @@
     height: calc(100% - 64px);
   }
   .NavWrapper {
-    height: calc(100% - 64px);
+    height: inherit;
     position: absolute;
-    z-index: 1;
+    z-index: 2;
     transform: translateX(-100%);
   }
   .ServerChats {
     width: 100vh;
+  }
+  .OpenUserStatusPanel {
+    display: none;
   }
 }

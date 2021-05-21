@@ -10,8 +10,10 @@ import 'firebase/database';
 import ServerList from './ServerList/ServerList';
 import ServerChannels from './ServerChannels/ServerChannels';
 import ChannelChat from './ChannelChat/ChannelChat';
-import { AppBar, Backdrop, IconButton, Toolbar } from '@material-ui/core';
+import ServerUserStatusPane from './ServerUserStatusPane/ServerUserStatusPane';
+import { AppBar, Backdrop, Fade, IconButton, Slide, Toolbar } from '@material-ui/core';
 import MenuIcon from '@material-ui/icons/Menu';
+import GroupOutlinedIcon from '@material-ui/icons/GroupOutlined';
 
 const Chat = () => {
     const auth = useAuth();
@@ -22,6 +24,8 @@ const Chat = () => {
     const [loadedChats, setLoadedChats] = useState([]);
     const [width, setWindowWidth] = useState(0);
     const [menuOpen, setMenuOpen] = useState(true);
+    const [userStatusPaneOpen, setUserStatusPaneOpen] = useState(true);
+    const [showServerUserStatusPaneControls, setShowServerUserStatusPaneControls] = useState(false);
 
     // Set user online/offline status
     useEffect(() => {
@@ -122,7 +126,7 @@ const Chat = () => {
                     })
                 }
                 ref.off();
-                if(selectedChannel === serverName && selectedChannel === channelName) {
+                if (selectedChannel === serverName && selectedChannel === channelName) {
                     setSelectedChannel(null);
                 }
             }
@@ -130,13 +134,28 @@ const Chat = () => {
 
     }
 
+    const openStatusPane = () => {
+        setShowServerUserStatusPaneControls(false);
+        setTimeout(() => setUserStatusPaneOpen(true), 500);
+    }
+
+    const closeStatusPane = () => {
+        setUserStatusPaneOpen(false);
+        setTimeout(() => setShowServerUserStatusPaneControls(true), 500);
+    }
+
     return (
         <div className={css.ChatWrapper}>
             <AppBar position="static" style={AppBarStyles}>
                 <Toolbar>
-                    <IconButton edge="start" onClick={() => setMenuOpen(prev => !prev)}>
+                    <IconButton onClick={() => setMenuOpen(prev => !prev)}>
                         <MenuIcon />
                     </IconButton>
+                    <Fade in={Boolean(selectedServer)}>
+                        <IconButton onClick={() => setUserStatusPaneOpen(prev => !prev)}>
+                            <GroupOutlinedIcon />
+                        </IconButton>
+                    </Fade>
                 </Toolbar>
             </AppBar>
             <div className={css.ChatComponents}>
@@ -168,6 +187,14 @@ const Chat = () => {
                         )
                     })}
                 </div>
+
+                <Slide in={showServerUserStatusPaneControls} direction="left" mountOnEnter unmountOnExit>
+                    <div className={css.OpenUserStatusPanel} onClick={openStatusPane}>
+                        <GroupOutlinedIcon />
+                    </div>
+                </Slide>
+
+                {selectedServer && <ServerUserStatusPane server={selectedServer} userStatusPaneOpen={userStatusPaneOpen} setUserStatusPaneOpen={closeStatusPane} />}
             </div>
         </div>
     )

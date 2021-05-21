@@ -2,7 +2,14 @@
     background-color: #292C32;
     color: #84888d;
     height: 100%;
-    min-width: 100px;
+    min-width: 120px;
+    width: 15%;
+}
+
+.ServerUserStatusPane > button{
+    margin:0 auto;
+    display: block;
+    color: #f9f9f9;
 }
 
 .ServerUserStatusPane > ul > div {
@@ -18,3 +25,9 @@
     min-width: 0px;
     margin-right: 10px;
 }
+
+@media only screen and (max-width: 700px) {
+    .ServerUserStatusPane > button{
+        display: none;
+    }
+  }

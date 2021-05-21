@@ -7,16 +7,18 @@ import 'firebase/database';
 import 'firebase/storage';
 import useFirebaseDataListener from '../../../hooks/chat/useFirebaseDataListener';
 
+import { CircularProgress, IconButton, List, ListItem, ListItemIcon, ListItemText, ListSubheader, Slide, useTheme } from '@material-ui/core';
 import FiberManualRecordIcon from '@material-ui/icons/FiberManualRecord';
-import { List, ListItem, ListItemIcon, ListItemText, ListSubheader, useTheme } from '@material-ui/core';
+import GroupOutlinedIcon from '@material-ui/icons/GroupOutlined';
 
 const ServerUserStatusPane = props => {
-    const { server } = props;
+    const { server, userStatusPaneOpen, setUserStatusPaneOpen } = props;
 
     const [serverUsers, setServerUsers] = useState(false);
     const [userStates, setUserStates] = useState({});
-    const [onlineUsers, setOnlineUsers] = useState([])
-    const [offlineUsers, setOfflineUsers] = useState([])
+    const [onlineUsers, setOnlineUsers] = useState([]);
+    const [offlineUsers, setOfflineUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const serverUsersListener = useFirebaseDataListener(`serverUsers/${server}`);
     const theme = useTheme();
@@ -26,6 +28,10 @@ const ServerUserStatusPane = props => {
     // Set users of selected server when either selectedServer or serverUsers are updated.
     useEffect(() => {
         if (serverUsersListener) {
+            setLoading(true);
+            setUserStates({});
+            setOnlineUsers([]);
+            setOfflineUsers([]);
             setServerUsers(serverUsersListener);
         }
     }, [server, serverUsersListener])
@@ -89,40 +95,61 @@ const ServerUserStatusPane = props => {
 
             setOnlineUsers(onlineUsers);
             setOfflineUsers(offlineUsers);
+            setLoading(false);
         }
     }, [userStates])
 
     return (
-        <div className={css.ServerUserStatusPane}>
-            <List dense={true} subheader={<ListSubheader component="div">Online</ListSubheader>}>
-                {onlineUsers.map(userDetails => (
-                    <ListItem key={`online_${userDetails.username}_${userDetails.status}_susp`}>
-                        <ListItemIcon size={5}>
-                            <FiberManualRecordIcon style={{ fontSize: "0.7rem", color: primary }} />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={`${userDetails.username}`}
-                        />
-                    </ListItem>
-                ))}
-            </List>
+        <Slide direction="left" in={userStatusPaneOpen} mountOnEnter unmountOnExit className={css.ServerUserStatusPane}>
+            <div>
+                <IconButton onClick={() => setUserStatusPaneOpen(false)}>
+                    <GroupOutlinedIcon />
+                </IconButton>
 
-            <List dense={true} subheader={<ListSubheader component="div">Offline</ListSubheader>}>
-                {offlineUsers.map(userDetails => (
-                    <ListItem key={`offline_${userDetails.username}_${userDetails.status}_susp`}>
-                        <ListItemIcon>
-                            <FiberManualRecordIcon style={{ fontSize: "0.7rem", color: secondary }} />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={`${userDetails.username}`}
-                        />
-                    </ListItem>
-                ))}
-            </List>
-        </div>
+                <List dense={true} subheader={<ListSubheader component="div">Online</ListSubheader>}>
+                    {loading &&
+                        <ListItem>
+                            <CircularProgress />
+                        </ListItem>
+                    }
+                    {onlineUsers.map(userDetails => (
+                        <ListItem key={`online_${userDetails.username}_${userDetails.status}_susp`}>
+                            <ListItemIcon size={5}>
+                                <FiberManualRecordIcon style={{ fontSize: "0.7rem", color: primary }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary={`${userDetails.username}`}
+                            />
+                        </ListItem>
+                    ))}
+                </List>
+
+                <List dense={true} subheader={<ListSubheader component="div">Offline</ListSubheader>}>
+                    {loading &&
+                        <ListItem>
+                            <CircularProgress />
+                        </ListItem>
+                    }
+                    {offlineUsers.map(userDetails => (
+                        <ListItem key={`offline_${userDetails.username}_${userDetails.status}_susp`}>
+                            <ListItemIcon>
+                                <FiberManualRecordIcon style={{ fontSize: "0.7rem", color: secondary }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary={`${userDetails.username}`}
+                            />
+                        </ListItem>
+                    ))}
+                </List>
+            </div>
+        </Slide>
     )
 }
 
-const arePropsEqual = (prevState, nextState) => prevState.server === nextState.server;
+const arePropsEqual = (prevState, nextState) => {
+    const sameServer = prevState.server === nextState.server;
+    const sameOpenState = prevState.userStatusPaneOpen === nextState.userStatusPaneOpen;
+    return sameServer && sameOpenState;
+};
 
 export default React.memo(ServerUserStatusPane, arePropsEqual);
