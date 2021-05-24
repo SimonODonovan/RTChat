@@ -34,13 +34,20 @@ const UserSettingsDialog = () => {
     const userName = useFirebaseDataListener(`users/${auth.user.uid}/userName`);
     const userCurrentAvatarPath = useFirebaseDataListener(`/userAvatars/${auth.user.uid}/avatar`);
 
+    // All states should be stored as lowercase only
+    const userStates = {
+        ONLINE: "online",
+        OFFLINE: "offline",
+        AWAY: "away"
+    }
+
     // Set the users current username
-    useEffect(()=>{
-        if(userName) {
+    useEffect(() => {
+        if (userName) {
             setUsernamePlaceholder(userName);
         }
     }, [userName])
-    
+
     // Set the users current Avatar
     useEffect(() => {
         if (userCurrentAvatarPath) {
@@ -52,6 +59,7 @@ const UserSettingsDialog = () => {
     }, [userCurrentAvatarPath, avatarWasUpdated])
 
     const handleSignOut = () => {
+        firebase.database().ref(`users/${auth.user.uid}/status`).set(userStates.OFFLINE);
         auth.signOut();
     }
 

@@ -1,33 +1,48 @@
 .ServerUserStatusPane {
-    background-color: #292C32;
-    color: #84888d;
-    height: 100%;
-    min-width: 120px;
-    width: 15%;
+  background-color: #292c32;
+  color: #84888d;
+  height: 100%;
+  min-width: 120px;
+  width: 15%;
 }
 
-.ServerUserStatusPane > button{
-    margin:0 auto;
-    display: block;
-    color: #f9f9f9;
+/* StatusPane close button */
+.ServerUserStatusPane > button {
+  margin: 0 auto;
+  display: block;
+  color: #f9f9f9;
 }
 
+/* StatusPane sub-headers */
 .ServerUserStatusPane > ul > div {
-    color: #84888d;
+  color: #84888d;
 }
 
+/* StatusPane each user item */
 .ServerUserStatusPane > ul > li {
-    padding-top: 0px;
-    padding-bottom: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
 }
 
-.ServerUserStatusPane > ul > li > div{
-    min-width: 0px;
-    margin-right: 10px;
+/* StatusPane container icon */
+.ServerUserStatusPane > ul > li > div:first-child {
+  min-width: 0px;
+  margin-right: 10px;
+}
+
+/* StatusPane container icon */
+.ServerUserStatusPane > ul > li > div:nth-child(2) > span {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* StatusPane Status icons */
+.ServerUserStatusPane > ul svg {
+  font-size: 0.7rem;
 }
 
 @media only screen and (max-width: 700px) {
-    .ServerUserStatusPane > button{
-        display: none;
-    }
+  .ServerUserStatusPane > button {
+    display: none;
   }
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 import css from './Chat.module.css'
 import './ChatGlobal.css'
@@ -27,17 +27,52 @@ const Chat = () => {
     const [userStatusPaneOpen, setUserStatusPaneOpen] = useState(true);
     const [showServerUserStatusPaneControls, setShowServerUserStatusPaneControls] = useState(false);
 
-    // Set user online/offline status
+    // All states should be stored as lowercase only
+    const userStates = useMemo(() => ({
+        ONLINE: "online",
+        OFFLINE: "offline",
+        AWAY: "away"
+    }), []);
+
+    // Set user idle listener
     useEffect(() => {
-        const cleanup = () => {
-            firebase.database().ref(`users/${auth.user.uid}/status`).set("Offline");
+        var timeout;
+        var currentStatus; // always set on first login
+        firebase.database().ref(`users/${auth.user.uid}/status`).on("value", snapshot => currentStatus = snapshot.val());
+
+        function trackIdle() {
+            document.onmousedown = resetTimer;  // catches touchscreen presses as well      
+            document.ontouchstart = resetTimer; // catches touchscreen swipes as well 
+            document.onclick = resetTimer;      // catches touchpad clicks as well
+            document.onkeydown = resetTimer;
+            document.addEventListener('scroll', resetTimer, true); // improved; see comments
+
+            const setUserAway = () => {
+                firebase.database().ref(`users/${auth.user.uid}/status`).set(userStates.AWAY);
+            }
+
+            function resetTimer() {
+                clearTimeout(timeout);
+                if (currentStatus && (currentStatus === userStates.AWAY || currentStatus === userStates.OFFLINE)) {
+                    firebase.database().ref(`users/${auth.user.uid}/status`).set(userStates.ONLINE);
+                    console.log("Set user online again");
+                }
+                timeout = setTimeout(setUserAway, 10000);
+            }
         }
-        firebase.database().ref(`users/${auth.user.uid}/status`).set("Online");
-        window.addEventListener('beforeunload', cleanup);
-        return () => {
-            window.removeEventListener('beforeunload', cleanup);
+        trackIdle();
+
+        return () => { timeout && clearTimeout(timeout); }
+    }, [auth.user.uid, userStates])
+
+    // Set user status on initial load and pagehide
+    useEffect(() => {
+        const setUserAway = () => {
+            firebase.database().ref(`users/${auth.user.uid}/status`).set(userStates.AWAY);
         }
-    }, [auth.user.uid]);
+        firebase.database().ref(`users/${auth.user.uid}/status`).set(userStates.ONLINE);
+        document.onvisibilitychange = () => document.visibilityState === 'hidden' && setUserAway();
+    }, [auth.user.uid, userStates]);
 
     // Listen for userServer updates from ServerList component and update Loaded Chat Status dict with new servers
     useEffect(() => {

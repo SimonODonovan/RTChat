@@ -8,16 +8,23 @@ const App = () => {
 
   //TODO
   //Enhancements
-  // Style ServerUserStatusPane
-  // Add textoverflow ellipses to ServerUserStatusPane names
   // Update users in serverUsers/${server} when joining/leaving/creating/delete
   // Add auth rules to Storage (set metadata on file uploads + https://firebase.google.com/docs/rules/insecure-rules?authuser=0#storage)
   
   //Fixes
-  // Possible to set mobile users offline if they close the browser ?
+  // Fetching Message Spinner now showing
+  // ? Return message skeleton while fetching in progress
+  // Hide emojiMart on message send
+  // Hide emojiMart on clicking body
+  // Set max length on dialog textFields
 
   //Done
-  // Add implementation for ServerUserStatusPane + control buttons for mobile and desktop i.e. >700px && <700px
+  // Enhancements
+  // Add user away status.
+  // Add user timeout functionality which sets Online/Away status.
+  // Set users away when they navigate away from the page in any manner.
+  // Set users offline when they sign out.
+  // Added textoverflow ellipses to ServerUserStatusPane names.
 
 
   return (
