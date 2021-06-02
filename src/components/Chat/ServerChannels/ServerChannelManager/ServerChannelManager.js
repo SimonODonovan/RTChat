@@ -138,7 +138,7 @@ const ServerChannelManager = props => {
                     <List>
                         <ListItem>
                             <form onSubmit={addChannel}>
-                                <TextField placeholder="Add Channel" inputProps={{ maxLength: 15 }} autoFocus={true} value={newChannelName} onClick={() => addError && setAddError("")} onChange={evt => setNewChannelName(evt.target.value)} error={Boolean(addError)} helperText={addError} />
+                                <TextField placeholder="Add Channel" inputProps={{ maxLength: 15, spellCheck: "false" }} autoFocus={true} value={newChannelName} onClick={() => addError && setAddError("")} onChange={evt => setNewChannelName(evt.target.value)} error={Boolean(addError)} helperText={addError} />
                             </form>
                             <ListItemSecondaryAction>
                                 <IconButton disabled={!newChannelName} edge="end" onClick={addChannel}>

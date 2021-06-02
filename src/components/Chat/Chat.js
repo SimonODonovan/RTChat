@@ -55,7 +55,6 @@ const Chat = () => {
                 clearTimeout(timeout);
                 if (currentStatus && (currentStatus === userStates.AWAY || currentStatus === userStates.OFFLINE)) {
                     firebase.database().ref(`users/${auth.user.uid}/status`).set(userStates.ONLINE);
-                    console.log("Set user online again");
                 }
                 timeout = setTimeout(setUserAway, 10000);
             }
@@ -96,8 +95,13 @@ const Chat = () => {
                     setLoadedChatStates(prev => ({ ...prev, ...loadedChannelChats }));
             };
             setServerChannelLoadingStatusDict();
+            if(selectedServer && !(selectedServer in userServers)) {
+                setSelectedServer(null);
+                setSelectedChannel(null);
+                setShowServerUserStatusPaneControls(false);
+            }
         }
-    }, [userServers, loadedChatStates]);
+    }, [userServers, loadedChatStates, selectedServer]);
 
     useEffect(() => {
         const updateDimensions = () => {
@@ -114,7 +118,7 @@ const Chat = () => {
     }
 
     let slideState = "";
-    if (width < 700) {
+    if (width < 820) {
         AppBarStyles.display = "flex";
         slideState = menuOpen ? css.SlideIn : css.SlideOut;
     }
@@ -166,7 +170,6 @@ const Chat = () => {
                 }
             }
         });
-
     }
 
     const openStatusPane = () => {

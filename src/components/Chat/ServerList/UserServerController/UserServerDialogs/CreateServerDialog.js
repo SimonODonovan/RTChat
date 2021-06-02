@@ -33,10 +33,11 @@ const CreateServerDialog = props => {
 
     const createServer = async () => {
         const uploadServerAvatar = () => {
+            const customMetadata = { customMetadata: { owner: auth.user.uid } }
             const storageFilePath = `/serverAvatars/${newServerNameLower}/avatar`;
             const databaseFilePath = `/serverAvatars/${newServerNameLower}`;
             firebase.storage().ref().child(storageFilePath)
-                .putString(newServerAvatar, 'data_url')
+                .putString(newServerAvatar, 'data_url', customMetadata)
                 .then(snapshot => {
                     const avatarUpdate = { [databaseFilePath]: snapshot.ref.fullPath };
                     firebase.database().ref().update(avatarUpdate);
@@ -59,12 +60,14 @@ const CreateServerDialog = props => {
             if (rolesCreated) {
                 const serversPath = `/servers/${newServerNameLower}`;
                 const userSubscriptionsPath = `/users/${auth.user.uid}/subscribedServers/${newServerNameLower}`;
-                const serverChannelsPath = `/serverChannels/${newServerNameLower}`
+                const serverChannelsPath = `/serverChannels/${newServerNameLower}`;
+                const serverUsersPath = `/serverUsers/${newServerNameLower}/${auth.user.uid}`;
                 const channelsDict = Object.assign({}, ...newServerChannels.map((channel) => ({ [channel]: true })));
                 const update = {
                     [serversPath]: newServerName,
                     [userSubscriptionsPath]: true,
-                    [serverChannelsPath]: channelsDict
+                    [serverChannelsPath]: channelsDict,
+                    [serverUsersPath]: true
                 };
                 firebase.database().ref().update(update, error => {
                     setIsLoading(false);
@@ -123,11 +126,11 @@ const CreateServerDialog = props => {
                     required={true}
                     label="Server Name"
                     fullWidth
-                    inputprops={{ spellCheck: "false" }}
                     value={newServerName}
                     error={newServerNameError}
                     helperText={newServerNameHelperText}
                     onChange={evt => updateServerNameInput(evt.target.value)}
+                    inputProps={{ maxLength: 15, spellCheck: "false" }}
                 />
             </form>
         )

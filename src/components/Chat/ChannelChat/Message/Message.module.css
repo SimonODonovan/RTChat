@@ -149,7 +149,7 @@
   color: rgba(133, 137, 142, 0.9);
 }
 
-@media only screen and (max-width: 700px) {
+@media only screen and (max-width: 820px) {
   .MessageContent {
     margin-left: 20px;
   }

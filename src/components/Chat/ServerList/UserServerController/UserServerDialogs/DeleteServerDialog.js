@@ -52,6 +52,7 @@ const DeleteServerDialog = props => {
             [`serverMessages/${serverName}`]: null,
             [`serverRoles/${serverName}`]: null,
             [`servers/${serverName}`]: null,
+            [`serverUsers/${serverName}`]: null
         }
         firebase.database().ref().update(update, error => {
             if (!error) {
@@ -92,12 +93,12 @@ const DeleteServerDialog = props => {
                     updateSelectedServer(null);
                     setSelectedChannel(null);
                 }
+                setUserOwnedServers(prev => {
+                    const update = [...prev];
+                    update.splice(update.indexOf(serverName), 1);
+                    return update;
+                });
             }
-        });
-        setUserOwnedServers(prev => {
-            const update = [...prev];
-            update.splice(update.indexOf(serverName), 1);
-            return update;
         });
     }, [updateSelectedServer, selectedServer, setSelectedChannel]);
 

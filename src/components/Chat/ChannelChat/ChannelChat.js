@@ -39,7 +39,7 @@ const ChannelChat = props => {
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [emojiTarget, setEmojiTarget] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [fetchingMessages, setFetchingMessages] = useState(false);
+    const [fetchingMessages, setFetchingMessages] = useState(true);
     const [messagesExhausted, setMessagesExhausted] = useState(false);
     const [newestMessageKey, setNewestMessageKey] = useState(false);
     const [oldestMessageKey, setOldestMessageKey] = useState(false);
@@ -93,10 +93,11 @@ const ChannelChat = props => {
             return newDataUrl;
         }
 
-        if ((!newMessageText && !newFileUpload) || messageSending) {
+        if ((!newMessageText.trim() && !newFileUpload) || messageSending) {
             return
         }
         setMessageSending(true);
+        setShowEmojiPicker(false);
         const uploadMessage = (filePath = false, fileType = false) => {
             const messageDetails = {
                 userUID: auth.user.uid,
@@ -121,10 +122,11 @@ const ChannelChat = props => {
             })
         }
         if (newFileUpload) {
+            const customMetadata = { customMetadata: { owner: auth.user.uid } }
             const uuid = uuidv4();
             if (newFileUpload.video) {
                 const uncompressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/uncompressed/${uuid}`);
-                uncompressedStorRef.put(newFileUpload.video)
+                uncompressedStorRef.put(newFileUpload.video, customMetadata)
                     .then(ret => {
                         const filePath = ret.ref.fullPath;
                         uploadMessage(filePath, newFileUpload.fileType);
@@ -137,11 +139,11 @@ const ChannelChat = props => {
             } else {
                 const downscaledImagedDataUrl = downscaleImage(newFileUpload.compressed);
                 const compressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/${uuid}`);
-                compressedStorRef.putString(downscaledImagedDataUrl, 'data_url')
+                compressedStorRef.putString(downscaledImagedDataUrl, 'data_url', customMetadata)
                     .then(ret => {
                         const filePath = ret.ref.fullPath;
                         const uncompressedStorRef = firebase.storage().ref(`serverChatImages/${server}/${channel}/uncompressed/${uuid}`);
-                        uncompressedStorRef.put(newFileUpload.uncompressed)
+                        uncompressedStorRef.put(newFileUpload.uncompressed, customMetadata)
                             .then(() => {
                                 uploadMessage(filePath, newFileUpload.fileType);
                             })
@@ -218,6 +220,7 @@ const ChannelChat = props => {
                         setMessagesExhausted(true);
                     }
                     setRetrievedInitialMessages(true);
+                    setFetchingMessages(false);
                 });
         }
     }, [retrievedInitialMessages, server, channel, serverChannelMessagesPath, openEmojiReactionMenu])
@@ -381,14 +384,24 @@ const ChannelChat = props => {
 
     const wrapperClasses = ["FlexColStartCentered", css.ChannelChat];
     return (
-        <div className={wrapperClasses.join(' ')}>
-            <div ref={chatScrollerRef} onScroll={updateScrollPosition} className={css.ReverseScrolling} onClick={clearEmojiPicker}>
+        <div className={wrapperClasses.join(' ')} onClick={clearEmojiPicker}>
+            <div className={css.MessageListLoadingWrapper} >
+                <Zoom in={fetchingMessages} timeout={{ enter: 300, exit: 300 }} >
+                    <CircularProgress size={50} style={{ color: "#f9f9f9" }} />
+                </Zoom>
+            </div>
+
+            <div ref={chatScrollerRef} onScroll={updateScrollPosition} className={css.ReverseScrolling}>
                 <div className={css.MessageList}>
-                    {fetchingMessages && <CircularProgress size={50} />}
                     {messageList}
-                    {messageSending && <CircularProgress size={50} />}
-                    <div ref={messagesEndRef}></div>
+                    <div ref={messagesEndRef} />
                 </div>
+            </div>
+
+            <div className={css.MessageSendingLoadingWrapper} >
+                <Zoom in={messageSending} timeout={{ enter: 300, exit: 300 }} mountOnEnter={true} unmountOnExit={true}>
+                    <CircularProgress size={50} style={{ color: "#f9f9f9" }} />
+                </Zoom>
             </div>
 
             <div className={css.NewMessageInputWrapper}>

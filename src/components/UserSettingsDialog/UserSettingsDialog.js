@@ -133,8 +133,9 @@ const UserSettingsDialog = () => {
 
     const saveUpdatedAvatar = () => {
         const userAvatarPath = `/userAvatars/${auth.user.uid}/avatar`;
+        const customMetadata = { customMetadata: { owner: auth.user.uid } }
         firebase.storage().ref().child(userAvatarPath)
-            .putString(newAvatar, 'data_url')
+            .putString(newAvatar, 'data_url', customMetadata)
             .then(() => {
                 const avatarUpdate = { [userAvatarPath]: userAvatarPath };
                 firebase.database().ref().update(avatarUpdate);
@@ -199,8 +200,8 @@ const UserSettingsDialog = () => {
                                 <TextField margin="normal" label="Set Username"
                                     type="" value={newUserName} placeholder={usernamePlaceholder}
                                     onChange={(evt) => updateNewUsernameValue(evt.target.value)}
-                                    inputProps={{ spellCheck: "false" }}
                                     error={newUserNameError} helperText={newUserNameErrorHelperText}
+                                    inputProps={{ maxLength: 15, spellCheck: "false" }}
                                 />
                             </form>
                             <ListItemSecondaryAction>
@@ -277,14 +278,14 @@ const UserSettingsDialog = () => {
                                         <TextField margin="normal" label="Email confirmation"
                                             type="" value={emailConfirmation} variant="outlined"
                                             onChange={(evt) => setEmailConfirmation(evt.target.value)}
-                                            inputProps={{ spellCheck: "false" }}
+                                            inputProps={{ maxLength: 50, spellCheck: "false" }}
                                         />
                                     </div>
                                     <div>
                                         <TextField margin="normal" label="Password confirmation"
                                             type="password" value={passwordConfirmation} variant="outlined"
                                             onChange={(evt) => setPasswordConfirmation(evt.target.value)}
-                                            inputProps={{ spellCheck: "false" }}
+                                            inputProps={{ maxLength: 50, spellCheck: "false" }}
                                         />
                                     </div>
                                     <input type="submit" style={{ display: "none" }} />
