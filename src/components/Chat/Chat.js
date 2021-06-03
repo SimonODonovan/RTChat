@@ -124,8 +124,10 @@ const Chat = () => {
     }
 
     const updateSelectedServer = serverName => {
-        setSelectedServer(serverName);
-        setSelectedChannel(null);
+        if(serverName !== selectedServer) {
+            setSelectedServer(serverName);
+            setSelectedChannel(null);
+        }
     }
 
     const updateSelectedChannel = channelName => {
