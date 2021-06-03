@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "firefox",
+            "request": "launch",
+            "reAttach": true,
+            "name": "Firefox Launch localhost",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/.vscode/debug/userDataDirFF1"
+        },
+        {
             "type": "pwa-chrome",
             "request": "launch",
             "name": "1 Launch Chrome against localhost",
