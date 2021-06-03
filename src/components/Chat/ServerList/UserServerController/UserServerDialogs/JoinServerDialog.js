@@ -59,12 +59,17 @@ const JoinServerDialog = props => {
     const joinServer = useCallback(serverName => {
         setIsLoading(true);
         if (!userSubscriptions || !userSubscriptions[serverName]) {
-            const update = { [serverName]: true };
-            firebase.database().ref(userSubscriptionsPath).update(update, error => {
+            const userSubscriptionsPath = `users/${auth.user.uid}/subscribedServers/${serverName}`;
+            const serverUsersPath = `/serverUsers/${serverName}/${auth.user.uid}`;
+            const update = {
+                [userSubscriptionsPath]: true,
+                [serverUsersPath]: true
+            };
+            firebase.database().ref().update(update, error => {
                 setIsLoading(false);
             });
         }
-    }, [userSubscriptions, userSubscriptionsPath])
+    }, [userSubscriptions, auth.user.uid])
 
     const updateServerSearchDisplay = useCallback(() => {
         const displayItems = (
@@ -113,9 +118,9 @@ const JoinServerDialog = props => {
                             autoFocus={true}
                             required={true}
                             label="Server Name"
-                            inputProps={{ spellCheck: "false" }}
                             value={serverSearchInput}
                             onChange={evt => setServerSearchInput(evt.target.value)}
+                            inputProps={{ maxLength: 15, spellCheck: "false" }}
                         />
                         <Tooltip title="Find closest server name matches">
                             <span>

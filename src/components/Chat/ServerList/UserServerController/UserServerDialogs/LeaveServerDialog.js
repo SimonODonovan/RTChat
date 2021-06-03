@@ -16,9 +16,9 @@ import { green } from '@material-ui/core/colors';
 const LeaveServerDialog = props => {
     const auth = useAuth();
 
-    const {selectedServer, setSelectedServer, setSelectedChannel} = props;
+    const { selectedServer, updateSelectedServer, setSelectedChannel } = props;
 
-    const [userServers, setUserServers] = useState(null);
+    const [userServers, setUserServers] = useState([]);
     const [leaveServerChecks, setLeaveServerChecks] = useState({});
     const [userServersDisplay, setUserServersDisplay] = useState([]);
     const [hasOwnedServers, setHasOwnedServers] = useState(false);
@@ -28,25 +28,25 @@ const LeaveServerDialog = props => {
     // Set the server names to display in the leave server dialog
     useEffect(() => {
         if (userServersListener && serversListener) {
-            const setUserOwnedServers = async () => {
+            const setUserLeavableServers = async () => {
                 const serverNames = Object.keys(userServersListener);
                 const nonOwnedServers = [];
-                for(const serverName of serverNames) {
+                for (const serverName of serverNames) {
                     const snapshot = await firebase.database().ref(`serverRoles/${serverName}/owners/${auth.user.uid}`).once('value');
                     const serverOwner = snapshot.val();
-                    if(serverOwner) 
+                    if (!serverOwner)
                         nonOwnedServers.push(serverName);
                 }
                 setHasOwnedServers(serverNames.length !== nonOwnedServers.length);
-    
+
                 const caseCorrectServers = nonOwnedServers.map(serverNameLower => serversListener[serverNameLower]);
                 setUserServers(caseCorrectServers);
-    
+
                 const leaveChecks = { ...caseCorrectServers };
                 Object.keys(leaveChecks).forEach(serverName => leaveChecks[serverName] = false);
                 setLeaveServerChecks(leaveChecks);
             }
-            setUserOwnedServers();
+            setUserLeavableServers();
         } else {
             setUserServersDisplay("No subscribed servers!")
         }
@@ -54,20 +54,26 @@ const LeaveServerDialog = props => {
 
     const leaveServer = useCallback(serverName => {
         const serverNameLower = serverName.toLowerCase();
-        const userServerRef = firebase.database().ref(`users/${auth.user.uid}/subscribedServers/${serverNameLower}`);
-        userServerRef.remove();
-        if(serverName === selectedServer) {
-            setSelectedServer(null);
+        const subscribedServersPath = `users/${auth.user.uid}/subscribedServers/${serverNameLower}`;
+        const serverUsersPath = `/serverUsers/${serverNameLower}/${auth.user.uid}`;
+        const update = {
+            [subscribedServersPath]: null,
+            [serverUsersPath]: null
+        }
+        firebase.database().ref().update(update);
+
+        if (serverName === selectedServer) {
+            updateSelectedServer(null);
             setSelectedChannel(null);
         }
-    }, [auth.user.uid, selectedServer, setSelectedServer, setSelectedChannel])
+    }, [auth.user.uid, selectedServer, updateSelectedServer, setSelectedChannel])
 
     // Create and set the list display for the set users servers
     useEffect(() => {
         const updateLeaveServerChecks = (serverName, isLeaving) => {
             setLeaveServerChecks(prev => { return { ...prev, [serverName]: isLeaving } })
         }
-        if (userServers) {
+        if (userServers.length > 0) {
             const serversDisplay = (
                 <List>
                     {hasOwnedServers && <p>You can not leave owned servers.</p>}

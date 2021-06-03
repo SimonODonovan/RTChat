@@ -34,13 +34,20 @@ const UserSettingsDialog = () => {
     const userName = useFirebaseDataListener(`users/${auth.user.uid}/userName`);
     const userCurrentAvatarPath = useFirebaseDataListener(`/userAvatars/${auth.user.uid}/avatar`);
 
+    // All states should be stored as lowercase only
+    const userStates = {
+        ONLINE: "online",
+        OFFLINE: "offline",
+        AWAY: "away"
+    }
+
     // Set the users current username
-    useEffect(()=>{
-        if(userName) {
+    useEffect(() => {
+        if (userName) {
             setUsernamePlaceholder(userName);
         }
     }, [userName])
-    
+
     // Set the users current Avatar
     useEffect(() => {
         if (userCurrentAvatarPath) {
@@ -52,6 +59,7 @@ const UserSettingsDialog = () => {
     }, [userCurrentAvatarPath, avatarWasUpdated])
 
     const handleSignOut = () => {
+        firebase.database().ref(`users/${auth.user.uid}/status`).set(userStates.OFFLINE);
         auth.signOut();
     }
 
@@ -125,8 +133,9 @@ const UserSettingsDialog = () => {
 
     const saveUpdatedAvatar = () => {
         const userAvatarPath = `/userAvatars/${auth.user.uid}/avatar`;
+        const customMetadata = { customMetadata: { owner: auth.user.uid } }
         firebase.storage().ref().child(userAvatarPath)
-            .putString(newAvatar, 'data_url')
+            .putString(newAvatar, 'data_url', customMetadata)
             .then(() => {
                 const avatarUpdate = { [userAvatarPath]: userAvatarPath };
                 firebase.database().ref().update(avatarUpdate);
@@ -191,8 +200,8 @@ const UserSettingsDialog = () => {
                                 <TextField margin="normal" label="Set Username"
                                     type="" value={newUserName} placeholder={usernamePlaceholder}
                                     onChange={(evt) => updateNewUsernameValue(evt.target.value)}
-                                    inputProps={{ spellCheck: "false" }}
                                     error={newUserNameError} helperText={newUserNameErrorHelperText}
+                                    inputProps={{ maxLength: 15, spellCheck: "false" }}
                                 />
                             </form>
                             <ListItemSecondaryAction>
@@ -248,17 +257,13 @@ const UserSettingsDialog = () => {
                             </Button>
                             <ListItemSecondaryAction>
                                 {isDeleteAccountLocked ?
-                                    <Tooltip title="Danger: You will not receive another confirmation when clicking the Delete Account button">
-                                        <IconButton onClick={() => setIsDeleteAccountLocked(false)}>
-                                            <LockOpenOutlinedIcon />
-                                        </IconButton>
-                                    </Tooltip>
+                                    <IconButton onClick={() => setIsDeleteAccountLocked(false)}>
+                                        <LockOpenOutlinedIcon />
+                                    </IconButton>
                                     :
-                                    <Tooltip title="Lock the Delete Account button">
-                                        <IconButton onClick={() => setIsDeleteAccountLocked(true)}>
-                                            <LockOutlinedIcon />
-                                        </IconButton>
-                                    </Tooltip>
+                                    <IconButton onClick={() => setIsDeleteAccountLocked(true)}>
+                                        <LockOutlinedIcon />
+                                    </IconButton>
                                 }
                             </ListItemSecondaryAction>
                         </ListItem>
@@ -269,14 +274,14 @@ const UserSettingsDialog = () => {
                                         <TextField margin="normal" label="Email confirmation"
                                             type="" value={emailConfirmation} variant="outlined"
                                             onChange={(evt) => setEmailConfirmation(evt.target.value)}
-                                            inputProps={{ spellCheck: "false" }}
+                                            inputProps={{ maxLength: 50, spellCheck: "false" }}
                                         />
                                     </div>
                                     <div>
                                         <TextField margin="normal" label="Password confirmation"
                                             type="password" value={passwordConfirmation} variant="outlined"
                                             onChange={(evt) => setPasswordConfirmation(evt.target.value)}
-                                            inputProps={{ spellCheck: "false" }}
+                                            inputProps={{ maxLength: 50, spellCheck: "false" }}
                                         />
                                     </div>
                                     <input type="submit" style={{ display: "none" }} />

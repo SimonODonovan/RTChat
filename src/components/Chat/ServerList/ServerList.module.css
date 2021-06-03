@@ -29,9 +29,3 @@
     border-top: 2px solid #484c52;
     margin-top: auto;
 }
-
-/* @media only screen and (max-width: 700px) {
-  .ServerList {
-    height: calc(100% - 64px);
-  }
-} */

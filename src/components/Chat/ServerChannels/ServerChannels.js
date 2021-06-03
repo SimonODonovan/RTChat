@@ -8,7 +8,7 @@ import useFirebaseDataListener from '../../../hooks/chat/useFirebaseDataListener
 import { CircularProgress, Grow, List, ListItem, ListItemText } from '@material-ui/core';
 
 const ServerChannels = props => {
-    const { selectedServer, setSelectedChannel, selectedChannel } = props;
+    const { selectedServer, updateSelectedChannel, selectedChannel } = props;
     const auth = useAuth();
     const [serverChannelDisplay, setServerChannelDisplay] = useState([]);
     const [selectedListItem, setSelectedListItem] = useState(null);
@@ -19,18 +19,18 @@ const ServerChannels = props => {
 
     useEffect(() => {
         setLoading(true);
-        const updateSelectedChannel = channelName => {
+        const selectChannelListItem = channelName => {
             setSelectedListItem(channelName);
-            setSelectedChannel(channelName);
+            updateSelectedChannel(channelName);
         }
-        if (serverChannels && Object.keys(serverChannels).length > 0) {
+        if (serverChannels) {
             const serverChannelDisplayList = (
                 Object.keys(serverChannels).map(channelName => {
                     const key = channelName + '_sc';
                     const isSelectedClass = selectedListItem === channelName ? "SelectedListItem" : "UnselectedListItem";
                     return (
                         <Grow in={true} key={key}>
-                            <ListItem className={"ListItem"} onClick={() => updateSelectedChannel(channelName)} >
+                            <ListItem className={"ListItem"} onClick={() => selectChannelListItem(channelName)} >
                                 <ListItemText className={isSelectedClass} style={{ textAlign: "center", paddingRight: "5px" }}>
                                     {channelName}
                                 </ListItemText>
@@ -42,7 +42,11 @@ const ServerChannels = props => {
             setServerChannelDisplay(serverChannelDisplayList);
             setLoading(false);
         }
-    }, [setSelectedChannel, selectedListItem, serverChannels]);
+    }, [updateSelectedChannel, selectedListItem, serverChannels]);
+
+    useEffect(() => {
+        setSelectedListItem(null);
+    }, [selectedServer])
 
     return (
         <div className={css.ChannelList}>
@@ -50,7 +54,7 @@ const ServerChannels = props => {
                 <div className={css.ChannelManager}>
                     <ServerChannelManager
                         selectedServer={selectedServer}
-                        setSelectedChannel={setSelectedChannel}
+                        updateSelectedChannel={updateSelectedChannel}
                         selectedChannel={selectedChannel}
                         setSelectedListItem={setSelectedListItem}
                     />
@@ -67,7 +71,7 @@ const ServerChannels = props => {
 };
 
 const arePropsEqual = (prevState, nextState) => {
-    return prevState.selectedServer === nextState.selectedServer && prevState.selectedChannel === nextState.selectedChannel;
+    return (prevState.selectedServer === nextState.selectedServer) && (prevState.selectedChannel === nextState.selectedChannel);
 };
 
 export default React.memo(ServerChannels, arePropsEqual);

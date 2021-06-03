@@ -12,7 +12,7 @@ import useFirebaseDataListener from '../../../../hooks/chat/useFirebaseDataListe
 
 
 const ServerChannelManager = props => {
-    const { selectedServer, setSelectedChannel, selectedChannel, setSelectedListItem } = props;
+    const { selectedServer, updateSelectedChannel, selectedChannel, setSelectedListItem } = props;
     const [showManageDialog, setShowManageDialog] = useState(false);
     const [serverChannels, setServerChannels] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -74,9 +74,14 @@ const ServerChannelManager = props => {
         }
         const deleteChannelImages = async () => {
             for (const checkedChannel of checked) {
-                const storRef = `serverChatImages/${selectedServer}/${checkedChannel}`;
-                const res = await firebase.storage().ref(storRef).listAll();
-                for (const item of res.items) {
+                const storRefCompressed = `serverChatImages/${selectedServer}/${checkedChannel}`;
+                const compressedImages = await firebase.storage().ref(storRefCompressed).listAll();
+                for (const item of compressedImages.items) {
+                    item.delete();
+                }
+                const storRefUncompressed = `serverChatImages/${selectedServer}/${checkedChannel}/uncompressed`;
+                const uncompressedImages = await firebase.storage().ref(storRefUncompressed).listAll();
+                for (const item of uncompressedImages.items) {
                     item.delete();
                 }
             }
@@ -86,7 +91,7 @@ const ServerChannelManager = props => {
         deleteError && setDeleteError("");
         if (serverChannels.length > 0) {
             if (checked.indexOf(selectedChannel) > -1) {
-                setSelectedChannel(null);
+                updateSelectedChannel(null);
                 setSelectedListItem(null);
             }
             deleteChannels();
@@ -133,7 +138,7 @@ const ServerChannelManager = props => {
                     <List>
                         <ListItem>
                             <form onSubmit={addChannel}>
-                                <TextField placeholder="Add Channel" inputProps={{ maxLength: 15 }} autoFocus={true} value={newChannelName} onClick={() => addError && setAddError("")} onChange={evt => setNewChannelName(evt.target.value)} error={Boolean(addError)} helperText={addError} />
+                                <TextField placeholder="Add Channel" inputProps={{ maxLength: 15, spellCheck: "false" }} autoFocus={true} value={newChannelName} onClick={() => addError && setAddError("")} onChange={evt => setNewChannelName(evt.target.value)} error={Boolean(addError)} helperText={addError} />
                             </form>
                             <ListItemSecondaryAction>
                                 <IconButton disabled={!newChannelName} edge="end" onClick={addChannel}>

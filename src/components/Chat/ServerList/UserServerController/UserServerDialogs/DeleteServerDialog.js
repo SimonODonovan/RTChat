@@ -17,7 +17,7 @@ import { green } from '@material-ui/core/colors';
 const DeleteServerDialog = props => {
     const auth = useAuth();
 
-    const {selectedServer, setSelectedServer, setSelectedChannel} = props;
+    const { selectedServer, updateSelectedServer, setSelectedChannel } = props;
 
     const [userOwnedServers, setUserOwnedServers] = useState([]);
     const [userOwnedServersDisplay, setUserOwnedServersDisplay] = useState(null);
@@ -52,29 +52,55 @@ const DeleteServerDialog = props => {
             [`serverMessages/${serverName}`]: null,
             [`serverRoles/${serverName}`]: null,
             [`servers/${serverName}`]: null,
+            [`serverUsers/${serverName}`]: null
         }
         firebase.database().ref().update(update, error => {
-            if (error)
-                console.log(error)
-            else {
-                firebase.storage().ref(`/serverAvatars/${serverName}/avatar`).delete()
+            if (!error) {
+                const serverPath = `/serverAvatars/${serverName}`;
+                firebase.storage().ref(serverPath).child("avatar").delete()
+                    .catch(error => {
+                        if (error.code !== 'storage/object-not-found') {
+                            console.log(error);
+                        }
+                    });
+
+                firebase.storage().ref(`/serverChatImages/${serverName}`).listAll()
+                    .then(listResults => {
+                        // Channels listResults
+                        for (const folder of listResults.prefixes) {
+                            firebase.storage().ref(folder.fullPath).listAll()
+                                .then(listResults => {
+                                    // Compressed images listResults
+                                    for (const image of listResults.items) {
+                                        image.delete();
+                                    }
+                                });
+                            firebase.storage().ref(folder.fullPath).child("uncompressed").listAll()
+                                .then(listResults => {
+                                    // Uncompressed images listResults
+                                    for (const image of listResults.items) {
+                                        image.delete();
+                                    }
+                                });
+                        }
+                    })
                     .catch(error => {
                         if (error.code !== 'storage/object-not-found') {
                             console.log(error);
                         }
                     });
                 if (serverName === selectedServer) {
-                    setSelectedServer(null);
+                    updateSelectedServer(null);
                     setSelectedChannel(null);
                 }
+                setUserOwnedServers(prev => {
+                    const update = [...prev];
+                    update.splice(update.indexOf(serverName), 1);
+                    return update;
+                });
             }
         });
-        setUserOwnedServers(prev => {
-            const update = [...prev];
-            update.splice(update.indexOf(serverName), 1);
-            return update;
-        });
-    }, [setSelectedServer, selectedServer, setSelectedChannel]);
+    }, [updateSelectedServer, selectedServer, setSelectedChannel]);
 
     useEffect(() => {
         const updateDeleteServerChecks = (serverName, isLeaving) => {

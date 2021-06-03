@@ -2,24 +2,126 @@ import React, { useState, useEffect } from 'react';
 
 import css from './Message.module.css';
 
+import useAuth from '../../../../hooks/auth/useAuth';
+
 import firebase from 'firebase/app';
 import 'firebase/database';
 import 'firebase/storage';
+import useFirebaseDataListener from '../../../../hooks/chat/useFirebaseDataListener';
 
-import { Avatar, useTheme } from '@material-ui/core';
+import { Avatar, CircularProgress, Fade, IconButton, Tooltip, useTheme } from '@material-ui/core';
+import SentimentVerySatisfiedOutlinedIcon from '@material-ui/icons/SentimentVerySatisfiedOutlined';
+import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined';
+import ReplyIcon from '@material-ui/icons/Reply';
+import PanoramaOutlinedIcon from '@material-ui/icons/PanoramaOutlined';
+import MoreVertOutlinedIcon from '@material-ui/icons/MoreVertOutlined';
 
 const Message = props => {
-    const { message, timestamp, file, userUID } = props.messageDetails;
+    const { messageKey, server, channel, openEmojiReactionMenu, replyToMessage } = props;
+    const { message, timestamp, file, fileType, userUID, quote } = props.messageDetails;
+    const auth = useAuth();
     const theme = useTheme();
+    const hasImage = Boolean(file);
 
     const [avatarUrl, setAvatarUrl] = useState("");
     const [userDisplayName, setUserDisplayName] = useState("");
-    const [imageUrl, setImageUrl] = useState(false);
+    const [imageUrlCompressed, setImageUrlCompressed] = useState(false);
+    const [imageUrlUncompressed, setImageUrlUncompressed] = useState(false);
+    const [gifUrl, setGifUrl] = useState(false);
+    const [webmUrl, setWebmUrl] = useState(false);
+    const [imageLoading, setImageLoading] = useState(hasImage);
+    const [messageReactionsDisplay, setMessageReactionsDisplay] = useState(null);
+    const [showMenuActions, setShowMenuActions] = useState(false);
+
+    const messageReactionsPath = `serverMessages/${server}/${channel}/${messageKey}/reactions`;
+    const messageReactions = useFirebaseDataListener(messageReactionsPath);
 
     if (file) {
-        firebase.storage().ref(file).getDownloadURL()
-            .then(fileUrl => setImageUrl(fileUrl))
+        const ref = firebase.storage().ref(file);
+        if (fileType === 'video/webm') {
+            ref.getDownloadURL()
+                .then(fileUrl => {
+                    setWebmUrl(fileUrl);
+                });
+        } else if (fileType === 'image/gif') {
+            ref.getDownloadURL()
+                .then(fileUrl => {
+                    setGifUrl(fileUrl);
+                });
+        } else {
+            const splitFileURI = file.split('/');
+            splitFileURI[splitFileURI.length] = splitFileURI[splitFileURI.length - 1];
+            splitFileURI[splitFileURI.length - 2] = "uncompressed";
+            const uncompressedImageFilePath = splitFileURI.join('/');
+            firebase.storage().ref(uncompressedImageFilePath).getDownloadURL()
+                .then(fileUrl => {
+                    setImageUrlUncompressed(fileUrl);
+                })
+                .catch(error => null);
+            ref.getDownloadURL()
+                .then(fileUrl => {
+                    setImageUrlCompressed(fileUrl);
+                });
+        }
     }
+
+    // Track message reactions and update display on change
+    useEffect(() => {
+        const clickReactionPinHandler = (emoji, userPinnedReaction) => {
+            const messageEmojiRef = firebase.database().ref(`${messageReactionsPath}/${emoji}/${auth.user.uid}`);
+            if (userPinnedReaction) {
+                messageEmojiRef.set(null);
+            } else {
+                messageEmojiRef.set(true);
+            }
+        }
+        const getReactionPinUsernames = async (reactedUIDs) => {
+            const reqs = [];
+            const usernames = [];
+            for (const uid of reactedUIDs) {
+                reqs.push(
+                    firebase.database().ref(`users/${uid}/userName`).once('value')
+                );
+            }
+            await Promise.all(reqs)
+                .then(snapshots => {
+                    for (const snapshot of snapshots) {
+                        const username = snapshot.val();
+                        usernames.push(username);
+                    }
+                });
+            return usernames.join('\n');
+        }
+        const createMessageReactionPins = async () => {
+            const messageReactionPins = [];
+            const reactionEntries = Object.entries(messageReactions);
+            for (const [emoji, UIDs] of reactionEntries) {
+                const reactedUIDs = Object.keys(UIDs);
+                const reactedUsernames = await getReactionPinUsernames(reactedUIDs);
+                const reactedUsersCount = reactedUIDs.length;
+                const reactionPinClasses = `${css.MessageReactionPin} ${UIDs[auth.user.uid] && css.UserPinnedReaction}`
+                const emojiReactionPin = (
+                    <Tooltip title={reactedUsernames} key={`${messageKey}_reaction_${emoji}_pin`}>
+                        <div className={reactionPinClasses} onClick={() => clickReactionPinHandler(emoji, UIDs[auth.user.uid])}>
+                            {`${emoji} ${reactedUsersCount}`}
+                        </div>
+                    </Tooltip>
+                );
+                messageReactionPins.push(emojiReactionPin);
+            }
+            const messageReactionsDisplay = (
+                <div className={css.MessageReactionDisplay}>
+                    {messageReactionPins}
+                </div>
+            )
+            setMessageReactionsDisplay(messageReactionsDisplay);
+        }
+        if (messageReactions) {
+            createMessageReactionPins();
+        } else {
+            setMessageReactionsDisplay(null);
+        }
+    }, [messageKey, messageReactions, messageReactionsPath, auth.user.uid])
 
     // Set users details for message. Use specific listener paths to prevent
     // unneccessary firebase "value" events from triggering.
@@ -57,15 +159,67 @@ const Message = props => {
                 <Avatar alt="Avatar Image" src={avatarUrl} style={{ width: theme.spacing(6), height: theme.spacing(6), }} />
             </div>
             <div className={css.MessageContent}>
-                <p>
-                    <span className={css.MessageName}>{userDisplayName}</span>
-                    <span className={css.MessageTime}>{localeDate + " at " + localeTime}</span>
-                </p>
-                <div>
+                <div className={css.MessageContentHeading}>
+                    <p>
+                        <span className={css.MessageName}>{userDisplayName}</span>
+                        <span className={css.MessageTime}>{localeDate + " at " + localeTime}</span>
+                    </p>
 
+                    <div id={`${messageKey}_MessageActionWrapper`} className={css.MessageActionWrapper} onClick={()=>setShowMenuActions(prev => !prev)} onMouseLeave={()=>setShowMenuActions(false)}>
+                        {showMenuActions &&
+                            <div className={css.MessageActionButtons}>
+                                <React.Fragment>
+                                    <Tooltip title="Quote">
+                                        <IconButton size="small" onClick={() => replyToMessage({ userUID: userUID, userDisplayName: userDisplayName, message: message, file: file, timestamp: localeDate + " at " + localeTime })}>
+                                            <ReplyIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="React">
+                                        <IconButton size="small" onClick={openEmojiReactionMenu}>
+                                            <SentimentVerySatisfiedOutlinedIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                </React.Fragment>
+                            </div>
+                        }
+                        <div className={css.MessageActionMoreIcon} >
+                            <IconButton size="small">
+                                <MoreVertOutlinedIcon />
+                            </IconButton>
+                        </div>
+                    </div>
                 </div>
-                {imageUrl && <img className={css.MessageImage} src={imageUrl} alt="attached message file" />}
+
+                {quote &&
+                    <div className={css.MessageQuote}>
+                        <p>{quote.userDisplayName} <span className={css.MessageTime}>{quote.timestamp}</span></p>
+                        {quote.hasFile && <PanoramaOutlinedIcon />}
+                        {quote.message && <p>"{quote.message}"</p>}
+                    </div>
+                }
+
+                {imageLoading ? <CircularProgress /> : null}
+                {(imageUrlCompressed || gifUrl) &&
+                    <Fade in={true}>
+                        <div className={css.MessageImageWrapper}>
+                            <img className={css.MessageImage} onLoad={() => setImageLoading(false)} src={imageUrlCompressed || gifUrl} alt="attached message file" />
+                            {imageUrlUncompressed &&
+                                <a href={imageUrlUncompressed} target="_blank" rel="noreferrer" className={css.UncompressedImageLink}>
+                                    <LinkOutlinedIcon style={{ color: "#f9f9f9" }} />
+                                </a>
+                            }
+                        </div>
+                    </Fade>
+                }
+                {webmUrl &&
+                    <Fade in={true}>
+                        <div className={css.MessageImageWrapper}>
+                            <video className={css.MessageImage} src={webmUrl} type="video/webm" controls preload="metadata" onLoadedData={() => setImageLoading(false)} />
+                        </div>
+                    </Fade>
+                }
                 <p className={css.MessageText}>{message}</p>
+                {messageReactionsDisplay}
             </div>
         </div>
     )

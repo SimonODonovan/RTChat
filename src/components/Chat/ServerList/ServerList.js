@@ -15,7 +15,7 @@ import { Avatar, CircularProgress, Grow, List, ListItem, ListItemAvatar, Tooltip
 
 const ServerList = props => {
     const auth = useAuth();
-    const { selectedServer, setSelectedServer, setSelectedChannel, setUserServers } = props;
+    const { selectedServer, updateSelectedServer, setSelectedChannel, setUserServers } = props;
     const [serverList, setServerList] = useState(null);
     const [serverAvatarUrls, setServerAvatarUrls] = useState({});
     const [selectedListItem, setSelectedListItem] = useState(null);
@@ -42,14 +42,14 @@ const ServerList = props => {
                 setLoading(false);
             })();
         } else {
-            setSelectedServer(false);
+            updateSelectedServer(false);
             setServerList(null);
         }
-    }, [userServers, setServerList, setSelectedServer, setUserServers])
+    }, [userServers, setServerList, updateSelectedServer, setUserServers])
 
     useEffect(() => {
-        const updateSelectedServer = serverName => {
-            setSelectedServer(serverName);
+        const updateSelectedServerListItem = serverName => {
+            updateSelectedServer(serverName);
             setSelectedListItem(serverName);
         }
         if (servers) {
@@ -67,7 +67,7 @@ const ServerList = props => {
                     return (
                         <Grow in={true} key={key}>
                             <div className={"ListItem"}>
-                                <ListItem onClick={() => updateSelectedServer(serverName)}>
+                                <ListItem onClick={() => updateSelectedServerListItem(serverName)}>
                                     <Tooltip title={servers[serverName] || ""}>
                                         <ListItemAvatar className={isSelectedClass}>{avatar}</ListItemAvatar>
                                     </Tooltip>
@@ -82,7 +82,7 @@ const ServerList = props => {
         } else {
             setServerList([]);
         }
-    }, [serverAvatarUrls, selectedListItem, setSelectedServer, servers])
+    }, [serverAvatarUrls, selectedListItem, updateSelectedServer, servers])
 
     //Unsubscribe user if userServers not found in all servers
     useEffect(() => {
@@ -107,7 +107,7 @@ const ServerList = props => {
     return (
         <div className={css.ServerList}>
             <div className={userServerControllerClasses}>
-                <UserServerController selectedServer={selectedServer} setSelectedServer={setSelectedServer} setSelectedChannel={setSelectedChannel} />
+                <UserServerController selectedServer={selectedServer} updateSelectedServer={updateSelectedServer} setSelectedChannel={setSelectedChannel} />
             </div>
             <List className={css.Servers}>
                 {loading && <ListItem><CircularProgress /></ListItem>}
