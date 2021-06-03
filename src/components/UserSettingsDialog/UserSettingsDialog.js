@@ -257,17 +257,13 @@ const UserSettingsDialog = () => {
                             </Button>
                             <ListItemSecondaryAction>
                                 {isDeleteAccountLocked ?
-                                    <Tooltip title="Danger: You will not receive another confirmation when clicking the Delete Account button">
-                                        <IconButton onClick={() => setIsDeleteAccountLocked(false)}>
-                                            <LockOpenOutlinedIcon />
-                                        </IconButton>
-                                    </Tooltip>
+                                    <IconButton onClick={() => setIsDeleteAccountLocked(false)}>
+                                        <LockOpenOutlinedIcon />
+                                    </IconButton>
                                     :
-                                    <Tooltip title="Lock the Delete Account button">
-                                        <IconButton onClick={() => setIsDeleteAccountLocked(true)}>
-                                            <LockOutlinedIcon />
-                                        </IconButton>
-                                    </Tooltip>
+                                    <IconButton onClick={() => setIsDeleteAccountLocked(true)}>
+                                        <LockOutlinedIcon />
+                                    </IconButton>
                                 }
                             </ListItemSecondaryAction>
                         </ListItem>

@@ -434,7 +434,7 @@ const ChannelChat = props => {
                         disabled={messageSending}
                         value={newMessageText}
                         onChange={evt => updateMessageText(evt)}
-                        inputProps={{ maxLength: 2000 }}
+                        inputProps={{ maxLength: 2000, style: { height: `${chatRows * 19}px` }}}
                         InputProps={{
                             style: { color: "#f9f9f9", fontFamily: "Roboto" },
                             startAdornment: (
