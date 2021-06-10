@@ -59,13 +59,14 @@ const ChannelChat = props => {
     }, [messageSending]);
 
     const openEmojiReactionMenu = useCallback((messageKey = false) => {
-        if (showEmojiPicker) {
+        if (showEmojiPicker && (emojiTarget === messageKey)) {
+            setEmojiTarget(false);
             setShowEmojiPicker(false);
         } else {
             setEmojiTarget(messageKey);
             setShowEmojiPicker(true);
         }
-    }, [showEmojiPicker])
+    }, [showEmojiPicker, emojiTarget])
 
     // After moving channel chat scroll, make sure it sticks to the bottom during messageList updates
     useEffect(() => {
@@ -97,7 +98,10 @@ const ChannelChat = props => {
             return
         }
         setMessageSending(true);
-        setShowEmojiPicker(false);
+        if (showEmojiPicker) {
+            setEmojiTarget(false);
+            setShowEmojiPicker(false);
+        }
         const uploadMessage = (filePath = false, fileType = false) => {
             const messageDetails = {
                 userUID: auth.user.uid,
@@ -163,7 +167,7 @@ const ChannelChat = props => {
         } else {
             uploadMessage();
         };
-    }, [newMessageText, newFileUpload, auth.user.uid, serverChannelMessagesPath,
+    }, [newMessageText, newFileUpload, auth.user.uid, serverChannelMessagesPath, showEmojiPicker,
         channel, server, messageSending, setMessageSending, clearFileUpload, messageQuote])
 
     const replyToMessage = messageDetails => {
@@ -375,16 +379,9 @@ const ChannelChat = props => {
         }
     }
 
-    const clearEmojiPicker = () => {
-        if (showEmojiPicker) {
-            setEmojiTarget(false);
-            setShowEmojiPicker(false);
-        }
-    }
-
     const wrapperClasses = ["FlexColStartCentered", css.ChannelChat];
     return (
-        <div className={wrapperClasses.join(' ')} onClick={clearEmojiPicker}>
+        <div className={wrapperClasses.join(' ')}>
             <div className={css.MessageListLoadingWrapper} >
                 <Zoom in={fetchingMessages} timeout={{ enter: 300, exit: 300 }} >
                     <CircularProgress size={50} style={{ color: "#f9f9f9" }} />
