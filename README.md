@@ -14,6 +14,7 @@ A real-time chat web application that uses React and Google's Firebase toolset.
 - Video file uploading
 - Message loading on demand, message downloads are chunked in reverse historical order with requests triggered by scrolling towards the top of the current chat channels messages.
 - Backend authentication making server content only available to joined users and server owners.
+- Responsive design.
 
 
 ## Demo
