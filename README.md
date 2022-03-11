@@ -2,7 +2,7 @@
 
 A real-time chat web application that uses React and Google's Firebase toolset.
 
-![Logo](https://github.com/Stga/RTChat/blob/master/rtChatLogo.PNG)
+![Logo](rtChatLogo.PNG)
 
 
 ## Features
@@ -18,5 +18,5 @@ A real-time chat web application that uses React and Google's Firebase toolset.
 
 ## Demo
 
-https://github.com/Stga/RTChat/blob/master/rtChatGif.gif
+![alt-text](rtChatGif.gif)
 
